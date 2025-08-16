@@ -121,42 +121,113 @@ async def login_page(request: web_request.Request):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Login - Outwar Clone</title>
+        <title>Outwar - Login</title>
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #1a1a1a; color: #fff; }}
-            .container {{ max-width: 400px; margin: 100px auto; padding: 30px; background: #333; border-radius: 10px; }}
-            .title {{ text-align: center; color: #ff6600; margin-bottom: 30px; }}
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            
+            /* Top Navigation */
+            .top-nav {{ background: linear-gradient(180deg, #000 0%, #333 100%); height: 40px; display: flex; }}
+            .nav-tab {{ padding: 8px 20px; color: #ccc; cursor: pointer; border-radius: 8px 8px 0 0; }}
+            .nav-tab.active {{ background: linear-gradient(180deg, #ff8c00 0%, #ffd700 100%); color: #000; font-weight: bold; }}
+            
+            /* Header Status Bar */
+            .status-bar {{ background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%); height: 30px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #000; font-size: 11px; font-weight: bold; }}
+            .status-left {{ display: flex; gap: 15px; align-items: center; }}
+            .status-right {{ display: flex; gap: 10px; }}
+            .status-icon {{ width: 16px; height: 16px; border-radius: 50%; background: #333; }}
+            
+            /* Login Container */
+            .login-container {{ padding: 50px 20px; max-width: 500px; margin: 0 auto; }}
+            .login-panel {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; padding: 40px; }}
+            .login-title {{ text-align: center; font-size: 24px; color: #ffd700; margin-bottom: 30px; font-weight: bold; }}
+            .outwar-logo {{ text-align: center; margin-bottom: 40px; }}
+            .outwar-logo h1 {{ color: #ff8c00; font-size: 36px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }}
+            .outwar-logo p {{ color: #ccc; font-size: 14px; margin-top: 10px; }}
+            
+            /* Form Styling */
             .form-group {{ margin: 20px 0; }}
-            label {{ display: block; margin-bottom: 5px; }}
-            input {{ width: 100%; padding: 10px; border: none; border-radius: 5px; background: #555; color: white; }}
-            .btn {{ width: 100%; padding: 15px; background: #ff6600; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1.1em; }}
-            .btn:hover {{ background: #ff8833; }}
-            .error {{ color: #ff4444; text-align: center; margin: 10px 0; }}
-            .links {{ text-align: center; margin-top: 20px; }}
-            .links a {{ color: #ff6600; text-decoration: none; }}
+            .form-label {{ display: block; margin-bottom: 8px; color: #ccc; font-size: 12px; font-weight: bold; }}
+            .form-input {{ width: 100%; padding: 12px 15px; background: #444; border: 1px solid #666; border-radius: 5px; color: white; font-size: 14px; }}
+            .form-input:focus {{ outline: none; border-color: #ffd700; box-shadow: 0 0 5px rgba(255, 215, 0, 0.3); }}
+            
+            .login-btn {{ width: 100%; padding: 15px; background: linear-gradient(180deg, #ff6600 0%, #cc5500 100%); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; text-transform: uppercase; }}
+            .login-btn:hover {{ background: linear-gradient(180deg, #ff8800 0%, #dd6600 100%); }}
+            
+            /* Error Message */
+            .error-message {{ background: #4a0000; border: 1px solid #ff4444; border-radius: 5px; padding: 10px; margin: 20px 0; text-align: center; color: #ff8888; }}
+            
+            /* Links */
+            .auth-links {{ text-align: center; margin-top: 30px; }}
+            .auth-links a {{ color: #88ccff; text-decoration: none; margin: 0 10px; font-size: 12px; }}
+            .auth-links a:hover {{ color: #aaddff; text-decoration: underline; }}
+            
+            /* Footer */
+            .auth-footer {{ text-align: center; margin-top: 40px; color: #666; font-size: 10px; }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <h2 class="title">LOGIN</h2>
-            
-            {f'<div class="error">{error}</div>' if error else ''}
-            
-            <form method="post">
-                <div class="form-group">
-                    <label>Username:</label>
-                    <input type="text" name="username" required>
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="nav-tab active">Login</div>
+            <div class="nav-tab">Register</div>
+            <div class="nav-tab">Explore World</div>
+            <div class="nav-tab">Dungeons</div>
+            <div class="nav-tab">Challenges</div>
+            <div class="nav-tab">All docs</div>
+            <div class="nav-tab">News</div>
+            <div class="nav-tab">Discord</div>
+        </div>
+        
+        <!-- Header Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span>Welcome to Outwar</span>
+                <span>🔴</span>
+                <span>🕐 Login Required</span>
+            </div>
+            <div class="status-right">
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+            </div>
+        </div>
+        
+        <!-- Login Container -->
+        <div class="login-container">
+            <div class="login-panel">
+                <div class="outwar-logo">
+                    <h1>OUTWAR</h1>
+                    <p>The Ultimate MMORPG Experience</p>
                 </div>
-                <div class="form-group">
-                    <label>Password:</label>
-                    <input type="password" name="password" required>
+                
+                <div class="login-title">Player Login</div>
+                
+                {f'<div class="error-message">{error}</div>' if error else ''}
+                
+                <form method="post">
+                    <div class="form-group">
+                        <label class="form-label">Username:</label>
+                        <input type="text" name="username" class="form-input" required autocomplete="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Password:</label>
+                        <input type="password" name="password" class="form-input" required autocomplete="current-password">
+                    </div>
+                    
+                    <button type="submit" class="login-btn">Enter Game</button>
+                </form>
+                
+                <div class="auth-links">
+                    <a href="/register">Create New Character</a> |
+                    <a href="/">Back to Homepage</a>
                 </div>
-                <button type="submit" class="btn">LOGIN</button>
-            </form>
-            
-            <div class="links">
-                <a href="/register">Don't have an account? Register</a><br>
-                <a href="/">Back to Home</a>
+                
+                <div class="auth-footer">
+                    Outwar Clone - Built with Python & aiohttp
+                </div>
             </div>
         </div>
     </body>

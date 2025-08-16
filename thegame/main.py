@@ -8,8 +8,46 @@ from pathlib import Path
 from database import init_database, get_db
 from handlers import auth, character, world, crew, combat
 
+@web.middleware
+async def error_middleware(request, handler):
+    """Global error handling middleware"""
+    try:
+        return await handler(request)
+    except web.HTTPException:
+        # Re-raise HTTP exceptions (redirects, etc.)
+        raise
+    except Exception as e:
+        print(f"Unhandled error in {request.path}: {e}")
+        # Return a generic error page
+        error_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error - Outwar</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 50px; }}
+                .error-container {{ max-width: 600px; margin: 0 auto; background: #333; padding: 40px; border-radius: 10px; }}
+                .error-title {{ color: #ff4444; font-size: 24px; margin-bottom: 20px; }}
+                .error-message {{ margin: 20px 0; }}
+                .back-link {{ color: #ff6600; text-decoration: none; }}
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <h1 class="error-title">Oops! Something went wrong</h1>
+                <div class="error-message">
+                    An unexpected error occurred while processing your request.
+                    Please try again later.
+                </div>
+                <a href="/game" class="back-link">← Return to Game</a>
+            </div>
+        </body>
+        </html>
+        """
+        return web.Response(text=error_html, content_type='text/html', status=500)
+
 async def init_app():
-    app = web.Application()
+    app = web.Application(middlewares=[error_middleware])
     
     # Setup session storage (using SimpleCookieStorage for now)
     # Note: In production, use EncryptedCookieStorage with proper key management
@@ -83,8 +121,15 @@ async def heal_characters():
     """Heal characters periodically"""
     while True:
         try:
-            from services.character_service import auto_heal_characters
-            await auto_heal_characters()
+            database = await get_db()
+            async with database.get_connection_context() as conn:
+                # Heal all characters by 10 HP every 5 minutes
+                await conn.execute("""
+                    UPDATE characters 
+                    SET hit_points_current = MIN(hit_points_current + 10, hit_points_max)
+                    WHERE hit_points_current < hit_points_max
+                """)
+                await conn.commit()
         except Exception as e:
             print(f"Error healing characters: {e}")
         
@@ -101,8 +146,8 @@ async def main():
     # Run the web application
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, 'localhost', 8082)
-    print("Starting server at http://localhost:8082")
+    site = web.TCPSite(runner, 'localhost', 8083)
+    print("Starting server at http://localhost:8083")
     await site.start()
     
     # Keep running

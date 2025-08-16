@@ -274,7 +274,7 @@ async def join_crew(request: web_request.Request):
     raise web.HTTPFound('/crew')
 
 async def crew_vault(request: web_request.Request):
-    """Crew vault interface"""
+    """Crew vault interface - Outwar style"""
     await require_login(request)
     character = await get_current_character(request)
     
@@ -290,23 +290,17 @@ async def crew_vault(request: web_request.Request):
         
         # Get vault contents
         vault_items = await database.queries.get_crew_vault(conn, crew_id=crew_data['id'])
+        
+        # Get crew members for award dropdown
+        crew_members = await database.queries.get_crew_members(conn, crew_id=crew_data['id'])
     
-    # Build vault items HTML
-    vault_html = ""
-    for item in vault_items:
-        vault_html += f"""
-        <div class="vault-item" style="border-color: {item['color']}">
-            <div class="item-name" style="color: {item['color']}">{item['name']}</div>
-            <div class="item-info">
-                Quantity: {item['quantity']}<br>
-                Deposited by: {item['deposited_by_name'] or 'Unknown'}<br>
-                Date: {item['deposited_at'][:10]}
-            </div>
-            <form method="post" action="/crew/vault/award/{item['id']}" style="margin-top: 10px;">
-                <button type="submit" class="btn-xs">AWARD TO ME</button>
-            </form>
-        </div>
-        """
+    # Build vault grid (10x10 + 4 additional = 104 slots total)
+    vault_grid_html = build_vault_grid(vault_items)
+    
+    # Build member dropdown options
+    member_options = ""
+    for member in crew_members:
+        member_options += f'<option value="{member["id"]}">{member["name"]}</option>'
     
     html = f"""
     <!DOCTYPE html>
@@ -314,40 +308,230 @@ async def crew_vault(request: web_request.Request):
     <head>
         <title>Crew Vault - {crew_data['name']}</title>
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #1a1a1a; color: #fff; }}
-            .header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }}
-            .title {{ color: #ff6600; }}
-            .nav {{ display: flex; gap: 15px; }}
-            .nav a {{ color: #ff6600; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 5px; }}
-            .vault-info {{ background: #333; padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
-            .vault-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }}
-            .vault-item {{ background: #444; border: 2px solid; border-radius: 8px; padding: 15px; }}
-            .item-name {{ font-weight: bold; margin-bottom: 10px; }}
-            .item-info {{ font-size: 0.9em; margin-bottom: 10px; }}
-            .btn-xs {{ padding: 5px 10px; font-size: 0.8em; background: #ff6600; color: white; border: none; border-radius: 3px; cursor: pointer; }}
-            .btn-xs:hover {{ background: #ff8833; }}
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            
+            /* Top Navigation */
+            .top-nav {{ background: linear-gradient(180deg, #000 0%, #333 100%); height: 40px; display: flex; }}
+            .nav-tab {{ padding: 8px 20px; color: #ccc; cursor: pointer; border-radius: 8px 8px 0 0; }}
+            .nav-tab.active {{ background: linear-gradient(180deg, #ff8c00 0%, #ffd700 100%); color: #000; font-weight: bold; }}
+            
+            /* Header Status Bar */
+            .status-bar {{ background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%); height: 30px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #000; font-size: 11px; font-weight: bold; }}
+            .status-left {{ display: flex; gap: 15px; align-items: center; }}
+            .status-right {{ display: flex; gap: 10px; }}
+            .status-icon {{ width: 16px; height: 16px; border-radius: 50%; background: #333; }}
+            
+            /* Main Container */
+            .main-container {{ padding: 20px; }}
+            
+            /* Crew Header */
+            .crew-header {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center; }}
+            .crew-name {{ color: #4169e1; font-size: 18px; font-weight: bold; margin-bottom: 10px; }}
+            .crew-actions {{ display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; }}
+            .dropdown-btn {{ padding: 5px 15px; background: linear-gradient(180deg, #8a2be2 0%, #6a1b9a 100%); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; }}
+            .dropdown-btn:hover {{ background: linear-gradient(180deg, #9932cc 0%, #7b1fa2 100%); }}
+            .vault-status {{ font-size: 12px; margin-top: 10px; }}
+            
+            /* Vault Grid */
+            .vault-section {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; padding: 20px; margin-bottom: 20px; }}
+            .vault-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }}
+            .vault-title {{ font-weight: bold; }}
+            .sort-options {{ font-size: 11px; }}
+            .sort-options select {{ background: #444; color: white; border: 1px solid #666; padding: 2px 5px; }}
+            
+            .vault-grid {{ display: grid; grid-template-columns: repeat(10, 48px); gap: 2px; justify-content: center; }}
+            .vault-slot {{ width: 48px; height: 48px; background: #444; border: 2px solid #666; border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; }}
+            .vault-slot.filled {{ border-color: #ffd700; }}
+            .vault-slot.filled:hover {{ background: #555; }}
+            .vault-slot.selected {{ border-color: #00ff00; background: #003300; }}
+            .vault-icon {{ font-size: 24px; }}
+            
+            /* Management Panels */
+            .management-panels {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
+            .panel {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; padding: 20px; }}
+            .panel-title {{ font-weight: bold; margin-bottom: 15px; }}
+            .panel-text {{ font-size: 11px; margin-bottom: 15px; line-height: 1.4; }}
+            .member-dropdown {{ width: 100%; padding: 8px; background: #444; color: white; border: 1px solid #666; border-radius: 3px; margin-bottom: 10px; }}
+            .action-btn {{ width: 100%; padding: 10px; background: linear-gradient(180deg, #4169e1 0%, #1e3a8a 100%); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }}
+            .action-btn:hover {{ background: linear-gradient(180deg, #5578ff 0%, #2563eb 100%); }}
+            .action-btn:disabled {{ background: #666; cursor: not-allowed; }}
+            .checkbox-row {{ margin: 10px 0; }}
+            .checkbox-row input {{ margin-right: 8px; }}
+            .log-link {{ color: #88ccff; text-decoration: underline; cursor: pointer; font-size: 11px; }}
+            .note {{ background: #444; padding: 10px; border-radius: 3px; font-size: 10px; margin-top: 10px; }}
         </style>
     </head>
     <body>
-        <div class="header">
-            <h1 class="title">CREW VAULT - {crew_data['name']}</h1>
-            <div class="nav">
-                <a href="/crew">CREW HOME</a>
-                <a href="/game">GAME</a>
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="nav-tab">Explore World</div>
+            <div class="nav-tab">Dungeons</div>
+            <div class="nav-tab">Challenges</div>
+            <div class="nav-tab active">Crew</div>
+            <div class="nav-tab">All docs</div>
+            <div class="nav-tab">News</div>
+            <div class="nav-tab">Discord</div>
+        </div>
+        
+        <!-- Header Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span>{character.name}</span>
+                <span>🔴</span>
+                <span>🕐 {character.id % 12 + 1}:{(character.id * 7) % 60:02d}am</span>
+                <span>Level: {character.level}</span>
+                <span>EXP: {character.experience:,}</span>
+                <span>RAGE: {character.rage_current}</span>
+            </div>
+            <div class="status-right">
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
             </div>
         </div>
         
-        <div class="vault-info">
-            <h3>Vault Status</h3>
-            <p><strong>Capacity:</strong> {len(vault_items)}/{crew_data['vault_capacity']} items</p>
-            <p><strong>Two-way Vault:</strong> {'Enabled' if crew_data['has_two_way_vault'] else 'Disabled'}</p>
+        <!-- Main Container -->
+        <div class="main-container">
+            <!-- Crew Header -->
+            <div class="crew-header">
+                <div class="crew-name">🔵 {crew_data['name']}</div>
+                <div class="crew-actions">
+                    <button class="dropdown-btn">Edit Crew ▼</button>
+                    <button class="dropdown-btn">Actions ▼</button>
+                    <button class="dropdown-btn">Storage ▼</button>
+                    <button class="dropdown-btn">Accomplishments ▼</button>
+                </div>
+                <div class="vault-status">Currently Storing {len(vault_items)} / {crew_data['vault_capacity']} Items</div>
+            </div>
+            
+            <!-- Vault Grid -->
+            <div class="vault-section">
+                <div class="vault-header">
+                    <div class="vault-title">Crew Vault</div>
+                    <div class="sort-options">
+                        Order By: 
+                        <select>
+                            <option>Alphabetical</option>
+                            <option>Newest</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="vault-grid">
+                    {vault_grid_html}
+                </div>
+            </div>
+            
+            <!-- Management Panels -->
+            <div class="management-panels">
+                <!-- Award Item Panel -->
+                <div class="panel">
+                    <div class="panel-title">Award Item</div>
+                    <div class="panel-text">
+                        To award an item to a crew member, click the item(s) you would like to award above, 
+                        then select the crew member to award it to below
+                    </div>
+                    <div class="panel-text">Member Dropdown:</div>
+                    <select class="member-dropdown" id="memberSelect">
+                        <option value="">Select Member</option>
+                        {member_options}
+                    </select>
+                    <button class="action-btn" onclick="awardItems()" disabled>Award Items</button>
+                    <div class="log-link" style="margin-top: 10px;">View awarded item log</div>
+                    <div class="note">
+                        <strong>Note:</strong> To deposit an item into your crew's vault, your crew must have 
+                        the Two Way Vault upgrade from the Treasury.
+                    </div>
+                </div>
+                
+                <!-- Delete Items Panel -->
+                <div class="panel">
+                    <div class="panel-title">Delete Items</div>
+                    <div class="panel-text">
+                        To delete an item from the vault, click the item(s) you would like to delete above, 
+                        check the check box, then click the delete items button below.
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="confirmDelete">
+                        <label for="confirmDelete">I would like to delete the selected items.</label>
+                    </div>
+                    <button class="action-btn" onclick="deleteItems()" disabled>Delete Items</button>
+                    <div class="log-link" style="margin-top: 10px;">View deleted item log</div>
+                </div>
+            </div>
         </div>
         
-        <h3>VAULT CONTENTS</h3>
-        <div class="vault-grid">
-            {vault_html if vault_html else '<p>Vault is empty.</p>'}
-        </div>
+        <script>
+        let selectedItems = new Set();
+        
+        function selectItem(slotIndex) {{
+            const slot = document.querySelector(`[data-slot="${{slotIndex}}"]`);
+            if (slot && slot.classList.contains('filled')) {{
+                if (selectedItems.has(slotIndex)) {{
+                    selectedItems.delete(slotIndex);
+                    slot.classList.remove('selected');
+                }} else {{
+                    selectedItems.add(slotIndex);
+                    slot.classList.add('selected');
+                }}
+                updateButtons();
+            }}
+        }}
+        
+        function updateButtons() {{
+            const hasSelection = selectedItems.size > 0;
+            const hasMember = document.getElementById('memberSelect').value !== '';
+            const hasDeleteConfirm = document.getElementById('confirmDelete').checked;
+            
+            document.querySelector('button[onclick="awardItems()"]').disabled = !hasSelection || !hasMember;
+            document.querySelector('button[onclick="deleteItems()"]').disabled = !hasSelection || !hasDeleteConfirm;
+        }}
+        
+        document.getElementById('memberSelect').addEventListener('change', updateButtons);
+        document.getElementById('confirmDelete').addEventListener('change', updateButtons);
+        
+        function awardItems() {{
+            if (selectedItems.size > 0) {{
+                const member = document.getElementById('memberSelect').value;
+                alert(`Awarding ${{selectedItems.size}} item(s) to member ${{member}}`);
+                // Implement actual award logic here
+            }}
+        }}
+        
+        function deleteItems() {{
+            if (selectedItems.size > 0) {{
+                alert(`Deleting ${{selectedItems.size}} item(s) from vault`);
+                // Implement actual delete logic here
+            }}
+        }}
+        </script>
     </body>
     </html>
     """
     return web.Response(text=html, content_type='text/html')
+
+def build_vault_grid(vault_items):
+    """Build the 10x10+4 vault grid"""
+    # Create 104 slots (10x10 + 4 additional)
+    total_slots = 104
+    filled_slots = len(vault_items)
+    
+    grid_html = ""
+    for i in range(total_slots):
+        if i < filled_slots:
+            # Filled slot with trophy icon (as per documentation)
+            grid_html += f'''
+            <div class="vault-slot filled" data-slot="{i}" onclick="selectItem({i})">
+                <div class="vault-icon">🏆</div>
+            </div>
+            '''
+        else:
+            # Empty slot
+            grid_html += f'''
+            <div class="vault-slot" data-slot="{i}">
+            </div>
+            '''
+    
+    return grid_html

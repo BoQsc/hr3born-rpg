@@ -133,33 +133,43 @@ async def attack_player(request: web_request.Request):
 
 def build_combat_result_html(attacker, target, damage_breakdown, counter_breakdown, 
                            actual_damage, actual_counter, winner_id, exp_gained, gold_gained):
-    """Build HTML for combat results"""
+    """Build Outwar-style combat result HTML"""
     
-    # Build damage breakdown
-    damage_details = ""
-    for dmg_type, amount in damage_breakdown.items():
-        if amount > 0 and dmg_type != 'total':
-            damage_details += f"<li>{dmg_type.title()}: {amount}</li>"
+    # Build combat log entries
+    combat_log_entries = []
     
-    counter_details = ""
-    if counter_breakdown:
+    # Add attacker's actions
+    if damage_breakdown.get('total', 0) > 0:
+        for dmg_type, amount in damage_breakdown.items():
+            if amount > 0 and dmg_type != 'total':
+                combat_log_entries.append(f"{attacker.name} hit {target.name} for {amount} {dmg_type} damage!")
+    
+    # Add defender's counter-attack
+    if counter_breakdown and counter_breakdown.get('total', 0) > 0:
         for dmg_type, amount in counter_breakdown.items():
             if amount > 0 and dmg_type != 'total':
-                counter_details += f"<li>{dmg_type.title()}: {amount}</li>"
+                combat_log_entries.append(f"{target.name} hit {attacker.name} for {amount} {dmg_type} damage!")
     
-    # Determine result message
+    # Final result
     if winner_id == attacker.id:
-        result_class = "victory"
-        result_message = "VICTORY!"
-        reward_message = f"Gained {exp_gained:,} experience and {gold_gained:,} gold!"
+        combat_log_entries.append(f"{attacker.name} has defeated {target.name}!")
+        result_message = "You have won the battle!"
+        reward_text = f"{attacker.name} gained {exp_gained} strength" if exp_gained > 0 else f"{attacker.name} gained 0 strength"
+        gold_text = f"🟡 {attacker.name} gained {gold_gained} gold!" if gold_gained > 0 else ""
     elif winner_id == target.id:
-        result_class = "defeat"
-        result_message = "DEFEAT!"
-        reward_message = "You were defeated and lost experience and gold."
+        combat_log_entries.append(f"{target.name} has defeated {attacker.name}!")
+        result_message = "You have been defeated!"
+        reward_text = f"{attacker.name} lost experience and gold"
+        gold_text = ""
     else:
-        result_class = "draw"
-        result_message = "BATTLE CONTINUES"
-        reward_message = "Both fighters survive to fight another day."
+        result_message = "Battle continues..."
+        reward_text = "No one was defeated"
+        gold_text = ""
+    
+    # Build combat log HTML
+    combat_log_html = ""
+    for entry in combat_log_entries:
+        combat_log_html += f"<div class='log-entry'>{entry}</div>"
     
     html = f"""
     <!DOCTYPE html>
@@ -167,89 +177,146 @@ def build_combat_result_html(attacker, target, damage_breakdown, counter_breakdo
     <head>
         <title>Combat Result - {attacker.name} vs {target.name}</title>
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #1a1a1a; color: #fff; }}
-            .combat-result {{ max-width: 800px; margin: 0 auto; }}
-            .header {{ text-align: center; margin-bottom: 30px; }}
-            .result-title {{ font-size: 2.5em; margin-bottom: 10px; }}
-            .victory {{ color: #00ff00; }}
-            .defeat {{ color: #ff4444; }}
-            .draw {{ color: #ffaa00; }}
-            .combatants {{ display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0; }}
-            .combatant {{ background: #333; padding: 20px; border-radius: 10px; }}
-            .combatant h3 {{ color: #ff6600; margin-top: 0; }}
-            .damage-breakdown {{ background: #444; padding: 15px; border-radius: 8px; margin: 15px 0; }}
-            .damage-breakdown h4 {{ margin-top: 0; color: #ff6600; }}
-            .damage-breakdown ul {{ margin: 10px 0; padding-left: 20px; }}
-            .total-damage {{ font-size: 1.2em; font-weight: bold; color: #ff4444; }}
-            .hp-bar {{ margin: 10px 0; }}
-            .hp-label {{ display: flex; justify-content: space-between; }}
-            .hp-progress {{ width: 100%; height: 20px; background: #555; border-radius: 10px; margin-top: 5px; }}
-            .hp-fill {{ height: 100%; border-radius: 10px; background: #ff4444; }}
-            .rewards {{ background: #004400; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center; }}
-            .penalties {{ background: #440000; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center; }}
-            .actions {{ text-align: center; margin: 30px 0; }}
-            .btn {{ padding: 15px 30px; background: #ff6600; color: white; text-decoration: none; border-radius: 5px; margin: 0 10px; }}
-            .btn:hover {{ background: #ff8833; }}
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            
+            /* Top Navigation */
+            .top-nav {{ background: linear-gradient(180deg, #000 0%, #333 100%); height: 40px; display: flex; }}
+            .nav-tab {{ padding: 8px 20px; color: #ccc; cursor: pointer; border-radius: 8px 8px 0 0; }}
+            .nav-tab.active {{ background: linear-gradient(180deg, #ff8c00 0%, #ffd700 100%); color: #000; font-weight: bold; }}
+            
+            /* Header Status Bar */
+            .status-bar {{ background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%); height: 30px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #000; font-size: 11px; font-weight: bold; }}
+            .status-left {{ display: flex; gap: 15px; align-items: center; }}
+            .status-right {{ display: flex; gap: 10px; }}
+            .status-icon {{ width: 16px; height: 16px; border-radius: 50%; background: #333; }}
+            
+            /* Combat Screen Layout */
+            .combat-container {{ padding: 20px; max-width: 800px; margin: 0 auto; text-align: center; }}
+            .battle-header {{ margin-bottom: 30px; }}
+            .battle-title {{ font-size: 24px; color: #ffd700; margin-bottom: 10px; }}
+            .vs-text {{ font-size: 18px; color: #ccc; }}
+            
+            /* Character Portraits */
+            .combatants {{ display: flex; justify-content: space-around; margin: 30px 0; }}
+            .combatant {{ width: 200px; }}
+            .portrait {{ width: 200px; height: 300px; background: linear-gradient(45deg, #8b0000, #000); border: 2px solid #888; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }}
+            .portrait.left {{ background: linear-gradient(45deg, #8b0000, #000); }}
+            .portrait.right {{ background: linear-gradient(45deg, #4a4a4a, #000); }}
+            .health-bar {{ width: 100%; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin-top: 5px; }}
+            .health-fill {{ height: 100%; background: linear-gradient(90deg, #ff4444 0%, #cc3333 100%); transition: width 0.3s; }}
+            
+            /* Battle Result */
+            .battle-result {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; padding: 20px; margin: 20px 0; }}
+            .result-message {{ font-size: 18px; color: #00ff00; font-weight: bold; margin-bottom: 10px; }}
+            .result-message.defeat {{ color: #ff4444; }}
+            .reward-line {{ margin: 5px 0; }}
+            .gold-reward {{ color: #ffd700; }}
+            .combat-log-toggle {{ color: #88ccff; cursor: pointer; text-decoration: underline; margin-top: 10px; }}
+            
+            /* Combat Log */
+            .combat-log {{ background: #1a1a1a; border: 1px solid #555; border-radius: 5px; padding: 15px; margin-top: 10px; text-align: left; display: none; }}
+            .combat-log.show {{ display: block; }}
+            .log-entry {{ margin: 3px 0; font-family: 'Courier New', monospace; font-size: 11px; color: #fff; }}
+            
+            /* Return Button */
+            .return-button {{ margin-top: 30px; }}
+            .btn-return {{ padding: 15px 30px; background: linear-gradient(180deg, #ff6600 0%, #cc5500 100%); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; }}
+            .btn-return:hover {{ background: linear-gradient(180deg, #ff8800 0%, #dd6600 100%); }}
         </style>
     </head>
     <body>
-        <div class="combat-result">
-            <div class="header">
-                <h1 class="result-title {result_class}">{result_message}</h1>
-                <h2>{attacker.name} vs {target.name}</h2>
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="nav-tab">Explore World</div>
+            <div class="nav-tab active">Combat</div>
+            <div class="nav-tab">Dungeons</div>
+            <div class="nav-tab">Challenges</div>
+            <div class="nav-tab">All docs</div>
+            <div class="nav-tab">News</div>
+            <div class="nav-tab">Discord</div>
+        </div>
+        
+        <!-- Header Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span>{attacker.name}</span>
+                <span>🔴</span>
+                <span>🕐 {attacker.id % 12 + 1}:{(attacker.id * 7) % 60:02d}am</span>
+                <span>Level: {attacker.level}</span>
+                <span>EXP: {attacker.experience:,}</span>
+                <span>RAGE: {attacker.rage_current}</span>
+            </div>
+            <div class="status-right">
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+            </div>
+        </div>
+        
+        <!-- Combat Container -->
+        <div class="combat-container">
+            <div class="battle-header">
+                <div class="battle-title">{attacker.name}</div>
+                <div class="vs-text">VS</div>
+                <div class="battle-title">{target.name}</div>
             </div>
             
+            <!-- Character Portraits -->
             <div class="combatants">
                 <div class="combatant">
-                    <h3>{attacker.name} (Attacker)</h3>
-                    <div class="damage-breakdown">
-                        <h4>Damage Dealt: {damage_breakdown['total']}</h4>
-                        <ul>
-                            {damage_details}
-                        </ul>
-                        <div class="total-damage">Actual Damage: {actual_damage}</div>
-                    </div>
-                    <div class="hp-bar">
-                        <div class="hp-label">
-                            <span>Hit Points</span>
-                            <span>{attacker.hit_points_current}/{attacker.hit_points_max}</span>
-                        </div>
-                        <div class="hp-progress">
-                            <div class="hp-fill" style="width: {(attacker.hit_points_current/attacker.hit_points_max)*100:.1f}%;"></div>
+                    <div class="portrait left">
+                        <div style="text-align: center; color: #ccc;">
+                            {attacker.name}<br>
+                            <small>Level {attacker.level}</small>
                         </div>
                     </div>
-                    {f'<div class="rewards"><strong>{reward_message}</strong></div>' if winner_id == attacker.id else ''}
-                    {f'<div class="penalties"><strong>{reward_message}</strong></div>' if winner_id == target.id else ''}
+                    <div class="health-bar">
+                        <div class="health-fill" style="width: {(attacker.hit_points_current/attacker.hit_points_max)*100:.1f}%;"></div>
+                    </div>
+                    <div style="margin-top: 5px; font-size: 11px;">Health: {attacker.hit_points_current}/{attacker.hit_points_max}</div>
                 </div>
                 
                 <div class="combatant">
-                    <h3>{target.name} (Defender)</h3>
-                    {f'''
-                    <div class="damage-breakdown">
-                        <h4>Counter Damage: {counter_breakdown.get('total', 0)}</h4>
-                        <ul>
-                            {counter_details}
-                        </ul>
-                        <div class="total-damage">Actual Damage: {actual_counter}</div>
-                    </div>
-                    ''' if counter_breakdown else '<p><em>No counter-attack</em></p>'}
-                    <div class="hp-bar">
-                        <div class="hp-label">
-                            <span>Hit Points</span>
-                            <span>{target.hit_points_current}/{target.hit_points_max}</span>
-                        </div>
-                        <div class="hp-progress">
-                            <div class="hp-fill" style="width: {(target.hit_points_current/target.hit_points_max)*100:.1f}%;"></div>
+                    <div class="portrait right">
+                        <div style="text-align: center; color: #ccc;">
+                            {target.name}<br>
+                            <small>Level {target.level}</small>
                         </div>
                     </div>
+                    <div class="health-bar">
+                        <div class="health-fill" style="width: {(target.hit_points_current/target.hit_points_max)*100:.1f}%;"></div>
+                    </div>
+                    <div style="margin-top: 5px; font-size: 11px;">Health: {target.hit_points_current}/{target.hit_points_max}</div>
                 </div>
             </div>
             
-            <div class="actions">
-                <a href="/game" class="btn">RETURN TO GAME</a>
-                <a href="/combat/history" class="btn">COMBAT HISTORY</a>
+            <!-- Battle Result -->
+            <div class="battle-result">
+                <div class="result-message {'defeat' if winner_id == target.id else ''}">{result_message}</div>
+                <div class="reward-line">{reward_text}</div>
+                {f'<div class="reward-line gold-reward">{gold_text}</div>' if gold_text else ''}
+                <div class="combat-log-toggle" onclick="toggleCombatLog()">Show Combat Log</div>
+                
+                <div class="combat-log" id="combatLog">
+                    <div style="margin-bottom: 10px; cursor: pointer;" onclick="toggleCombatLog()">Hide Combat Log</div>
+                    {combat_log_html}
+                </div>
+            </div>
+            
+            <!-- Return Button -->
+            <div class="return-button">
+                <a href="/game" class="btn-return">RETURN TO WORLD</a>
             </div>
         </div>
+        
+        <script>
+        function toggleCombatLog() {{
+            var log = document.getElementById('combatLog');
+            log.classList.toggle('show');
+        }}
+        </script>
     </body>
     </html>
     """
@@ -265,7 +332,7 @@ async def combat_history(request: web_request.Request):
     
     database = await get_db()
     async with database.get_connection_context() as conn:
-        combat_logs = await database.queries.get_combat_history(conn, attacker_id=character.id, target_id=character.id)
+        combat_logs = await database.queries.get_combat_history(conn, character_id=character.id)
     
     # Build combat log HTML
     combat_html = ""

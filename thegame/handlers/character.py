@@ -244,7 +244,7 @@ async def select_character(request: web_request.Request):
     raise web.HTTPFound('/characters')
 
 async def character_detail(request: web_request.Request):
-    """Character detail page"""
+    """Character profile page - Outwar style"""
     await require_login(request)
     character_id = int(request.match_info['character_id'])
     
@@ -290,126 +290,462 @@ async def character_detail(request: web_request.Request):
             )
     
     # Calculate total stats from equipment
-    total_equipment_stats = {
-        'attack': sum(eq.attack for eq in equipment.values()),
-        'hit_points': sum(eq.hit_points for eq in equipment.values()),
-        'chaos_damage': sum(eq.chaos_damage for eq in equipment.values()),
-        'vile_damage': sum(eq.vile_damage for eq in equipment.values()),
-        'fire_damage': sum(eq.fire_damage for eq in equipment.values()),
-        'kinetic_damage': sum(eq.kinetic_damage for eq in equipment.values()),
-        'arcane_damage': sum(eq.arcane_damage for eq in equipment.values()),
-        'holy_damage': sum(eq.holy_damage for eq in equipment.values()),
-        'shadow_damage': sum(eq.shadow_damage for eq in equipment.values()),
-        'fire_resist': sum(eq.fire_resist for eq in equipment.values()),
-        'kinetic_resist': sum(eq.kinetic_resist for eq in equipment.values()),
-        'arcane_resist': sum(eq.arcane_resist for eq in equipment.values()),
-        'holy_resist': sum(eq.holy_resist for eq in equipment.values()),
-        'shadow_resist': sum(eq.shadow_resist for eq in equipment.values()),
-    }
+    total_attack = character.attack + sum(eq.attack for eq in equipment.values())
+    total_hp = character.hit_points_max + sum(eq.hit_points for eq in equipment.values())
+    total_chaos = character.chaos_damage + sum(eq.chaos_damage for eq in equipment.values())
+    total_elemental = sum([
+        character.fire_damage + sum(eq.fire_damage for eq in equipment.values()),
+        character.kinetic_damage + sum(eq.kinetic_damage for eq in equipment.values()),
+        character.arcane_damage + sum(eq.arcane_damage for eq in equipment.values()),
+        character.holy_damage + sum(eq.holy_damage for eq in equipment.values()),
+        character.shadow_damage + sum(eq.shadow_damage for eq in equipment.values())
+    ])
+    total_resist = sum([
+        character.fire_resist + sum(eq.fire_resist for eq in equipment.values()),
+        character.kinetic_resist + sum(eq.kinetic_resist for eq in equipment.values()),
+        character.arcane_resist + sum(eq.arcane_resist for eq in equipment.values()),
+        character.holy_resist + sum(eq.holy_resist for eq in equipment.values()),
+        character.shadow_resist + sum(eq.shadow_resist for eq in equipment.values())
+    ])
     
-    # Build equipment grid HTML
-    slots = ['head', 'chest', 'legs', 'boots', 'weapon', 'shield', 'accessory1', 'accessory2', 'ring1', 'ring2']
-    equipment_grid = ""
+    # Build Outwar-style equipment grid (3x4 + boots + quick slots)
+    equipment_grid_html = generate_equipment_grid(equipment)
     
-    for slot in slots:
-        eq = equipment.get(slot)
-        if eq and eq.item_id:
-            item_html = f"""
-            <div class="equipment-slot filled" style="border-color: {eq.rarity_color}">
-                <div class="item-name" style="color: {eq.rarity_color}">{eq.item_name}</div>
-                <div class="item-stats">
-                    {f'ATK: {eq.attack}' if eq.attack > 0 else ''}
-                    {f'HP: {eq.hit_points}' if eq.hit_points > 0 else ''}
-                </div>
-                <form method="post" action="/unequip/{eq.slot_id}" style="margin-top: 5px;">
-                    <button type="submit" class="btn-xs">UNEQUIP</button>
-                </form>
-            </div>
-            """
-        else:
-            item_html = f"""
-            <div class="equipment-slot empty">
-                <div class="slot-name">{slot.upper()}</div>
-                <div class="empty-text">Empty</div>
-            </div>
-            """
-        equipment_grid += item_html
+    # Calculate experience growth (mock data)
+    yesterday_growth = min(character.experience // 100, 99999)
     
     html = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>{character.name} - Character Details</title>
+        <title>{character.name} - Character Profile</title>
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #1a1a1a; color: #fff; }}
-            .header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }}
-            .title {{ color: #ff6600; }}
-            .nav {{ display: flex; gap: 15px; }}
-            .nav a {{ color: #ff6600; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 5px; }}
-            .character-info {{ display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }}
-            .stats-panel {{ background: #333; padding: 20px; border-radius: 10px; }}
-            .stat-row {{ display: flex; justify-content: space-between; margin: 5px 0; padding: 5px 0; border-bottom: 1px solid #555; }}
-            .equipment-grid {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }}
-            .equipment-slot {{ background: #444; border: 2px solid #666; border-radius: 8px; padding: 10px; text-align: center; min-height: 80px; }}
-            .equipment-slot.filled {{ border-color: #00aa00; }}
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            
+            /* Top Navigation */
+            .top-nav {{ background: linear-gradient(180deg, #000 0%, #333 100%); height: 40px; display: flex; }}
+            .nav-tab {{ padding: 8px 20px; color: #ccc; cursor: pointer; border-radius: 8px 8px 0 0; }}
+            .nav-tab.active {{ background: linear-gradient(180deg, #ff8c00 0%, #ffd700 100%); color: #000; font-weight: bold; }}
+            
+            /* Header Status Bar */
+            .status-bar {{ background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%); height: 30px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #000; font-size: 11px; font-weight: bold; }}
+            .status-left {{ display: flex; gap: 15px; align-items: center; }}
+            .status-right {{ display: flex; gap: 10px; }}
+            .status-icon {{ width: 16px; height: 16px; border-radius: 50%; background: #333; }}
+            
+            /* Main Content */
+            .main-container {{ padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; height: calc(100vh - 70px); }}
+            
+            /* Profile Section */
+            .profile-section {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; padding: 20px; }}
+            .profile-header {{ display: flex; gap: 20px; margin-bottom: 20px; }}
+            .profile-left {{ flex: 1; }}
+            .profile-name {{ font-size: 18px; font-weight: bold; color: #ffd700; margin-bottom: 5px; }}
+            .profile-hits {{ font-size: 11px; color: #ccc; margin-bottom: 15px; }}
+            .character-portrait {{ width: 200px; height: 250px; background: linear-gradient(45deg, #8b0000, #000); border: 2px solid #888; display: flex; align-items: center; justify-content: center; color: #ccc; border-radius: 8px; }}
+            
+            .action-buttons {{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }}
+            .action-btn {{ padding: 8px 12px; background: linear-gradient(180deg, #444 0%, #333 100%); color: white; border: 1px solid #666; border-radius: 5px; cursor: pointer; font-size: 10px; text-align: center; }}
+            .action-btn:hover {{ background: linear-gradient(180deg, #555 0%, #444 100%); }}
+            .action-btn.attack {{ background: linear-gradient(180deg, #ff4444 0%, #cc3333 100%); }}
+            .action-btn.trade {{ background: linear-gradient(180deg, #4444ff 0%, #3333cc 100%); }}
+            
+            /* Skills Section */
+            .skills-section {{ background: #333; border: 1px solid #555; border-radius: 5px; padding: 15px; margin: 20px 0; }}
+            .skills-header {{ font-weight: bold; margin-bottom: 10px; }}
+            
+            /* Player Info Panel */
+            .player-info {{ background: #333; border: 1px solid #555; border-radius: 5px; padding: 15px; }}
+            .info-header {{ font-weight: bold; margin-bottom: 15px; text-align: center; }}
+            .info-row {{ display: flex; justify-content: space-between; margin: 5px 0; font-size: 11px; }}
+            .info-label {{ color: #ccc; }}
+            .info-value {{ color: #fff; font-weight: bold; }}
+            .progress-bar {{ width: 100%; height: 15px; background: #444; border-radius: 3px; margin-top: 10px; overflow: hidden; }}
+            .progress-fill {{ height: 100%; background: linear-gradient(90deg, #ffd700 0%, #ff8c00 100%); }}
+            
+            /* Equipment Section */
+            .equipment-section {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; padding: 20px; }}
+            .equipment-header {{ font-weight: bold; margin-bottom: 15px; text-align: center; }}
+            .equipment-grid {{ display: grid; grid-template-columns: repeat(3, 64px); gap: 2px; justify-content: center; margin-bottom: 20px; }}
+            .equipment-slot {{ width: 64px; height: 64px; background: #444; border: 2px solid #666; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }}
+            .equipment-slot.filled {{ border-color: #ffd700; }}
             .equipment-slot.empty {{ border-style: dashed; }}
-            .item-name {{ font-weight: bold; margin-bottom: 5px; }}
-            .item-stats {{ font-size: 0.8em; }}
-            .btn-xs {{ padding: 3px 6px; font-size: 0.7em; background: #ff6600; color: white; border: none; border-radius: 3px; cursor: pointer; }}
-            .btn {{ padding: 8px 15px; background: #ff6600; color: white; border: none; border-radius: 5px; text-decoration: none; cursor: pointer; }}
+            .slot-icon {{ font-size: 24px; }}
+            .item-tooltip {{ position: absolute; top: -5px; right: -5px; background: #000; color: #ffd700; padding: 2px 4px; border-radius: 3px; font-size: 8px; }}
+            
+            .quick-slots {{ display: flex; justify-content: center; gap: 2px; margin-top: 15px; }}
+            .quick-slot {{ width: 48px; height: 48px; background: #444; border: 2px solid #666; border-radius: 3px; }}
+            .quick-slot.filled {{ border-color: #00aa00; }}
+            
+            /* Skill Crests */
+            .skill-crests {{ margin: 20px 0; }}
+            .crest-grid {{ display: flex; justify-content: center; gap: 5px; }}
+            .crest-slot {{ width: 40px; height: 40px; background: #444; border: 2px solid #666; border-radius: 3px; }}
+            
+            /* Masteries */
+            .masteries {{ margin-top: 20px; }}
+            .mastery-item {{ margin: 10px 0; }}
+            .mastery-label {{ font-size: 11px; margin-bottom: 3px; }}
+            .mastery-bar {{ width: 100%; height: 12px; background: #444; border-radius: 6px; overflow: hidden; }}
+            .mastery-fill {{ height: 100%; background: linear-gradient(90deg, #4169e1 0%, #1e90ff 100%); }}
+            
+            /* Equipment Tooltips */
+            .item-tooltip-container {{ position: absolute; background: rgba(0,0,0,0.95); border: 2px solid #ffd700; border-radius: 8px; padding: 10px; z-index: 1000; min-width: 200px; max-width: 300px; font-size: 11px; pointer-events: none; }}
+            .tooltip-title {{ color: #ffd700; font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #555; padding-bottom: 3px; }}
+            .tooltip-slot {{ color: #888; font-style: italic; margin-bottom: 8px; }}
+            .tooltip-stats {{ margin: 5px 0; }}
+            .stat-line {{ margin: 2px 0; }}
+            .stat-positive {{ color: #32cd32; }}
+            .stat-percentage {{ color: #ff8c00; }}
+            .stat-special {{ color: #4169e1; }}
+            .tooltip-footer {{ color: #ffd700; margin-top: 8px; border-top: 1px solid #555; padding-top: 5px; font-size: 10px; }}
         </style>
     </head>
     <body>
-        <div class="header">
-            <h1 class="title">{character.name} - Level {character.level} {character.class_name}</h1>
-            <div class="nav">
-                <a href="/characters">CHARACTERS</a>
-                <a href="/inventory">INVENTORY</a>
-                <a href="/game">GAME</a>
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="nav-tab">Explore World</div>
+            <div class="nav-tab active">Character</div>
+            <div class="nav-tab">Dungeons</div>
+            <div class="nav-tab">Challenges</div>
+            <div class="nav-tab">All docs</div>
+            <div class="nav-tab">News</div>
+            <div class="nav-tab">Discord</div>
+        </div>
+        
+        <!-- Header Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span>{character.name}</span>
+                <span>🔴</span>
+                <span>🕐 {character.id % 12 + 1}:{(character.id * 7) % 60:02d}am</span>
+                <span>Level: {character.level}</span>
+                <span>EXP: {character.experience:,}</span>
+                <span>RAGE: {character.rage_current}</span>
+            </div>
+            <div class="status-right">
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
             </div>
         </div>
         
-        <div class="character-info">
-            <div class="stats-panel">
-                <h3>CHARACTER STATS</h3>
-                <div class="stat-row"><span>Level:</span><span>{character.level}</span></div>
-                <div class="stat-row"><span>Experience:</span><span>{character.experience:,}</span></div>
-                <div class="stat-row"><span>Gold:</span><span>{character.gold:,}</span></div>
-                <div class="stat-row"><span>Total Power:</span><span>{character.total_power:,}</span></div>
+        <!-- Main Content -->
+        <div class="main-container">
+            <!-- Left Column -->
+            <div>
+                <!-- Profile Section -->
+                <div class="profile-section">
+                    <div class="profile-header">
+                        <div class="profile-left">
+                            <div class="profile-name">{character.name}</div>
+                            <div class="profile-hits">{character.id} Profile Hits</div>
+                            <div class="character-portrait">
+                                Character Portrait<br>
+                                <small>Level {character.level} {character.class_name}</small>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="action-btn attack">⚔️ ATTACK</button>
+                            <button class="action-btn trade">💎 TRADE</button>
+                            <button class="action-btn">✉️ MESSAGE</button>
+                            <button class="action-btn">👥 CREW INV</button>
+                            <button class="action-btn">➕ ADD ALLY</button>
+                            <button class="action-btn">⚔️ ADD ENEMY</button>
+                            <button class="action-btn">❌ BLOCK</button>
+                            <button class="action-btn">💰 TREASURY</button>
+                        </div>
+                    </div>
+                </div>
                 
-                <h4>Combat Stats</h4>
-                <div class="stat-row"><span>Attack:</span><span>{character.attack} + {total_equipment_stats['attack']} = {character.attack + total_equipment_stats['attack']}</span></div>
-                <div class="stat-row"><span>Hit Points:</span><span>{character.hit_points_current}/{character.hit_points_max + total_equipment_stats['hit_points']}</span></div>
-                <div class="stat-row"><span>Rage:</span><span>{character.rage_current}/{character.rage_max}</span></div>
+                <!-- Skills Section -->
+                <div class="skills-section">
+                    <div class="skills-header">SKILLS:</div>
+                    <div style="color: #888; text-align: center; font-style: italic;">No skills learned yet</div>
+                </div>
                 
-                <h4>Damage Types</h4>
-                <div class="stat-row"><span>Fire:</span><span>{character.fire_damage + total_equipment_stats['fire_damage']}</span></div>
-                <div class="stat-row"><span>Kinetic:</span><span>{character.kinetic_damage + total_equipment_stats['kinetic_damage']}</span></div>
-                <div class="stat-row"><span>Arcane:</span><span>{character.arcane_damage + total_equipment_stats['arcane_damage']}</span></div>
-                <div class="stat-row"><span>Holy:</span><span>{character.holy_damage + total_equipment_stats['holy_damage']}</span></div>
-                <div class="stat-row"><span>Shadow:</span><span>{character.shadow_damage + total_equipment_stats['shadow_damage']}</span></div>
-                <div class="stat-row"><span>Chaos:</span><span>{character.chaos_damage + total_equipment_stats['chaos_damage']}</span></div>
-                <div class="stat-row"><span>Vile:</span><span>{character.vile_damage + total_equipment_stats['vile_damage']}</span></div>
+                <!-- Player Info Panel -->
+                <div class="player-info">
+                    <div class="info-header">PLAYER INFO</div>
+                    <div class="info-row">
+                        <span class="info-label">CHARACTER CLASS</span>
+                        <span class="info-value">Level {character.level} {character.class_name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">TOTAL EXPERIENCE</span>
+                        <span class="info-value">{character.experience:,}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">GROWTH YESTERDAY</span>
+                        <span class="info-value">{yesterday_growth:,}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">TOTAL POWER</span>
+                        <span class="info-value">{character.total_power:,}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">ATTACK</span>
+                        <span class="info-value">{total_attack:,}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">HIT POINTS</span>
+                        <span class="info-value">{total_hp:,}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">CHAOS DAMAGE</span>
+                        <span class="info-value">{total_chaos}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">ELEMENTAL ATTACK</span>
+                        <span class="info-value">{total_elemental}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">ELEMENTAL RESIST</span>
+                        <span class="info-value">{total_resist}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">WILDERNESS LEVEL</span>
+                        <span class="info-value">{character.wilderness_level}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">GOD SLAYER LEVEL</span>
+                        <span class="info-value">{character.god_slayer_level}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">PARENT</span>
+                        <span class="info-value">None</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">FACTION</span>
+                        <span class="info-value">{character.faction_name or 'None'} ( )</span>
+                    </div>
+                    
+                    <div style="margin-top: 15px; text-align: center; font-size: 10px;">
+                        Leader of Test Crew
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {min(100, character.level * 1.5)}%;"></div>
+                    </div>
+                </div>
                 
-                <h4>Resistances</h4>
-                <div class="stat-row"><span>Fire:</span><span>{character.fire_resist + total_equipment_stats['fire_resist']}</span></div>
-                <div class="stat-row"><span>Kinetic:</span><span>{character.kinetic_resist + total_equipment_stats['kinetic_resist']}</span></div>
-                <div class="stat-row"><span>Arcane:</span><span>{character.arcane_resist + total_equipment_stats['arcane_resist']}</span></div>
-                <div class="stat-row"><span>Holy:</span><span>{character.holy_resist + total_equipment_stats['holy_resist']}</span></div>
-                <div class="stat-row"><span>Shadow:</span><span>{character.shadow_resist + total_equipment_stats['shadow_resist']}</span></div>
+                <!-- Personal Allies Section -->
+                <div class="player-info" style="margin-top: 20px;">
+                    <div class="info-header">PERSONAL ALLIES (0)</div>
+                    <div class="character-portrait" style="width: 100%; height: 150px; margin-top: 10px;">
+                        No Allies Yet
+                    </div>
+                </div>
             </div>
             
-            <div class="stats-panel">
-                <h3>EQUIPMENT</h3>
-                <div class="equipment-grid">
-                    {equipment_grid}
+            <!-- Right Column - Equipment -->
+            <div class="equipment-section">
+                <div class="equipment-header">EQUIPMENT</div>
+                
+                {equipment_grid_html}
+                
+                <!-- Skill Crests -->
+                <div class="skill-crests">
+                    <div class="equipment-header" style="font-size: 12px;">SKILL CRESTS</div>
+                    <div class="crest-grid">
+                        <div class="crest-slot"></div>
+                        <div class="crest-slot"></div>
+                        <div class="crest-slot"></div>
+                        <div class="crest-slot"></div>
+                    </div>
+                </div>
+                
+                <!-- Masteries -->
+                <div class="masteries">
+                    <div class="equipment-header" style="font-size: 12px;">MASTERIES</div>
+                    <div class="mastery-item">
+                        <div class="mastery-label">OVERALL MASTERY</div>
+                        <div class="mastery-bar">
+                            <div class="mastery-fill" style="width: {min(100, character.level * 1.2)}%;"></div>
+                        </div>
+                    </div>
+                    <div class="mastery-item">
+                        <div class="mastery-label">ATTACK MASTERY</div>
+                        <div class="mastery-bar">
+                            <div class="mastery-fill" style="width: {min(100, character.level * 0.8)}%;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+        
+        <!-- Tooltip Container -->
+        <div id="tooltip" class="item-tooltip-container" style="display: none;"></div>
+        
+        <script>
+        function showTooltip(event, itemId) {{
+            const tooltipData = document.getElementById('tooltip-' + itemId);
+            const tooltip = document.getElementById('tooltip');
+            
+            if (tooltipData && tooltip) {{
+                tooltip.innerHTML = tooltipData.innerHTML;
+                tooltip.style.display = 'block';
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 10) + 'px';
+            }}
+        }}
+        
+        function hideTooltip() {{
+            const tooltip = document.getElementById('tooltip');
+            if (tooltip) {{
+                tooltip.style.display = 'none';
+            }}
+        }}
+        
+        // Move tooltip with mouse
+        document.addEventListener('mousemove', function(event) {{
+            const tooltip = document.getElementById('tooltip');
+            if (tooltip && tooltip.style.display === 'block') {{
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 10) + 'px';
+            }}
+        }});
+        </script>
     </body>
     </html>
     """
     return web.Response(text=html, content_type='text/html')
+
+def generate_equipment_grid(equipment):
+    """Generate Outwar-style equipment grid"""
+    # Define slot layout according to Outwar documentation
+    slot_layout = [
+        ['accessory1', 'head', 'weapon'],      # Top row: 💎🔮🏹
+        ['shield', 'chest', 'accessory2'],     # Middle row: 🔫👕🛡️  
+        ['ring1', 'legs', 'ring2'],            # Bottom row: 💍👖💍
+        ['', 'boots', '']                      # Boots row: centered
+    ]
+    
+    slot_icons = {
+        'head': '🔮',
+        'chest': '👕', 
+        'legs': '👖',
+        'boots': '👢',
+        'weapon': '🏹',
+        'shield': '🛡️',
+        'accessory1': '💎',
+        'accessory2': '🛡️',
+        'ring1': '💍',
+        'ring2': '💍'
+    }
+    
+    grid_html = '<div class="equipment-grid">'
+    
+    for row in slot_layout:
+        for slot in row:
+            if slot == '':
+                # Empty grid space
+                grid_html += '<div style="width: 64px; height: 64px;"></div>'
+            else:
+                eq = equipment.get(slot)
+                if eq and eq.item_id:
+                    # Build tooltip content
+                    tooltip_content = build_item_tooltip(eq)
+                    # Equipped item
+                    grid_html += f'''
+                    <div class="equipment-slot filled" onmouseover="showTooltip(event, '{eq.item_id}')" onmouseout="hideTooltip()">
+                        <div class="slot-icon">{slot_icons.get(slot, '⚪')}</div>
+                        <div class="item-tooltip">+{eq.attack + eq.hit_points}</div>
+                        <div class="tooltip-data" id="tooltip-{eq.item_id}" style="display:none;">{tooltip_content}</div>
+                    </div>
+                    '''
+                else:
+                    # Empty slot
+                    grid_html += f'''
+                    <div class="equipment-slot empty">
+                        <div class="slot-icon">{slot_icons.get(slot, '⚪')}</div>
+                    </div>
+                    '''
+    
+    grid_html += '</div>'
+    
+    # Add quick access slots
+    grid_html += '''
+    <div class="quick-slots">
+        <div class="quick-slot"></div>
+        <div class="quick-slot"></div>
+        <div class="quick-slot filled"></div>
+        <div class="quick-slot"></div>
+        <div class="quick-slot"></div>
+    </div>
+    '''
+    
+    return grid_html
+
+def build_item_tooltip(item):
+    """Build Outwar-style item tooltip HTML"""
+    # Determine if it's weapon or armor based on slot
+    is_weapon = item.slot_name in ['weapon']
+    is_armor = item.slot_name in ['head', 'chest', 'legs', 'boots', 'shield']
+    
+    tooltip_html = f'<div class="tooltip-title">{item.item_name}</div>'
+    tooltip_html += f'<div class="tooltip-slot">[Slot - {item.slot_name.title()}]</div>'
+    tooltip_html += '<div class="tooltip-stats">'
+    
+    # Add stats based on item type
+    if item.attack > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.attack} ATK</div>'
+    
+    if item.hit_points > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.hit_points} HP</div>'
+    
+    # Add elemental damages
+    if item.fire_damage > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.fire_damage} Fire</div>'
+    if item.kinetic_damage > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.kinetic_damage} Kinetic</div>'
+    if item.arcane_damage > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.arcane_damage} Arcane</div>'
+    if item.holy_damage > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.holy_damage} Holy</div>'
+    if item.shadow_damage > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.shadow_damage} Shadow</div>'
+    if item.chaos_damage > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.chaos_damage} Chaos</div>'
+    if item.vile_damage > 0:
+        tooltip_html += f'<div class="stat-line stat-positive">+{item.vile_damage} Vile</div>'
+    
+    # Add resistances for armor
+    if is_armor:
+        if item.fire_resist > 0:
+            tooltip_html += f'<div class="stat-line stat-positive">+{item.fire_resist} Fire Resist</div>'
+        if item.kinetic_resist > 0:
+            tooltip_html += f'<div class="stat-line stat-positive">+{item.kinetic_resist} Kinetic Resist</div>'
+        if item.arcane_resist > 0:
+            tooltip_html += f'<div class="stat-line stat-positive">+{item.arcane_resist} Arcane Resist</div>'
+        if item.holy_resist > 0:
+            tooltip_html += f'<div class="stat-line stat-positive">+{item.holy_resist} Holy Resist</div>'
+        if item.shadow_resist > 0:
+            tooltip_html += f'<div class="stat-line stat-positive">+{item.shadow_resist} Shadow Resist</div>'
+    
+    # Add special stats
+    if item.rage_per_hour > 0:
+        tooltip_html += f'<div class="stat-line stat-special">+{item.rage_per_hour} rage per hr</div>'
+    if item.experience_per_hour > 0:
+        tooltip_html += f'<div class="stat-line stat-special">+{item.experience_per_hour} exp per hr</div>'
+    if item.gold_per_turn > 0:
+        tooltip_html += f'<div class="stat-line stat-special">+{item.gold_per_turn} gold per turn</div>'
+    if item.max_rage > 0:
+        tooltip_html += f'<div class="stat-line stat-special">+{item.max_rage} max rage</div>'
+    
+    # Add percentage bonuses
+    if item.critical_hit_percent > 0:
+        tooltip_html += f'<div class="stat-line stat-percentage">+{item.critical_hit_percent}% critical hit</div>'
+    if item.rampage_percent > 0:
+        tooltip_html += f'<div class="stat-line stat-percentage">+{item.rampage_percent}% rampage</div>'
+    
+    tooltip_html += '</div>'
+    
+    # Add footer (transfer limit info)
+    tooltip_html += '<div class="tooltip-footer">Can change hands 1 more time today</div>'
+    
+    return tooltip_html
 
 async def inventory(request: web_request.Request):
     """Character inventory page"""
