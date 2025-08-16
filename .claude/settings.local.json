@@ -1,8 +1,17 @@
 {
   "permissions": {
     "allow": [
+      "*",
       "Bash(python:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(mkdir:*)",
+      "Bash(timeout:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "WebSearch",
+      "Bash(taskkill:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
