@@ -58,7 +58,14 @@ class Character:
     @classmethod
     def from_db_row(cls, row: Dict[str, Any]) -> 'Character':
         """Create Character from database row"""
-        return cls(**row)
+        # Get field names from the dataclass
+        import dataclasses
+        field_names = {f.name for f in dataclasses.fields(cls)}
+        
+        # Filter row to only include fields that exist in the dataclass
+        filtered_row = {k: v for k, v in dict(row).items() if k in field_names}
+        
+        return cls(**filtered_row)
     
     def experience_needed_for_next_level(self) -> int:
         """Calculate experience needed for next level"""

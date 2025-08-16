@@ -13,13 +13,13 @@ async def crew_main(request: web_request.Request):
         raise web.HTTPFound('/characters')
     
     database = await get_db()
-    async with database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         # Check if character is in a crew
-        crew_data = await database.queries.get_crew_by_character(conn, character.id)
+        crew_data = await database.queries.get_crew_by_character(conn, character_id=character.id)
         
         if crew_data:
             # Character is in a crew - show crew interface
-            crew_members = await database.queries.get_crew_members(conn, crew_data['id'])
+            crew_members = await database.queries.get_crew_members(conn, crew_id=crew_data['id'])
             
             # Build member list
             members_html = ""
@@ -208,27 +208,30 @@ async def create_crew(request: web_request.Request):
         raise web.HTTPFound('/crew/create?error=Crew name must be at least 3 characters')
     
     database = await get_db()
-    async with database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         try:
             # Check if character is already in a crew
-            existing_crew = await database.queries.get_crew_by_character(conn, character.id)
+            existing_crew = await database.queries.get_crew_by_character(conn, character_id=character.id)
             if existing_crew:
                 raise web.HTTPFound('/crew/create?error=You are already in a crew')
             
             # Create crew
-            await database.queries.create_crew(conn, name, character.id, description or None)
+            await database.queries.create_crew(conn, name=name, leader_id=character.id, description=description or None)
             
             # Get the crew ID (SQLite doesn't return it directly)
-            new_crew = await conn.execute("SELECT id FROM crews WHERE name = ? AND leader_id = ?", (name, character.id))
+            new_crew = await conn.execute("SELECT id FROM crews WHERE name = :name AND leader_id = :leader_id", {"name": name, "leader_id": character.id})
             crew_row = await new_crew.fetchone()
             crew_id = crew_row[0]
             
             # Add character as leader
-            await database.queries.join_crew(conn, crew_id, character.id, 'leader')
+            await database.queries.join_crew(conn, crew_id=crew_id, character_id=character.id, role='leader')
             
             await conn.commit()
             raise web.HTTPFound('/crew')
             
+        except web.HTTPFound:
+            # Re-raise HTTP redirects (like the success redirect)
+            raise
         except Exception as e:
             if "UNIQUE constraint failed" in str(e):
                 raise web.HTTPFound('/crew/create?error=Crew name already exists')
@@ -245,27 +248,27 @@ async def join_crew(request: web_request.Request):
     crew_id = int(request.match_info['crew_id'])
     
     database = await get_db()
-    async with database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         # Check if character is already in a crew
-        existing_crew = await database.queries.get_crew_by_character(conn, character.id)
+        existing_crew = await database.queries.get_crew_by_character(conn, character_id=character.id)
         if existing_crew:
             raise web.HTTPBadRequest(text="Already in a crew")
         
         # Check crew exists and has space
-        crew_check = await conn.execute("SELECT max_members FROM crews WHERE id = ?", (crew_id,))
+        crew_check = await conn.execute("SELECT max_members FROM crews WHERE id = :crew_id", {"crew_id": crew_id})
         crew_data = await crew_check.fetchone()
         if not crew_data:
             raise web.HTTPNotFound()
         
         # Count current members
-        member_count = await conn.execute("SELECT COUNT(*) FROM crew_members WHERE crew_id = ?", (crew_id,))
+        member_count = await conn.execute("SELECT COUNT(*) FROM crew_members WHERE crew_id = :crew_id", {"crew_id": crew_id})
         count = await member_count.fetchone()
         
         if count[0] >= crew_data[0]:
             raise web.HTTPBadRequest(text="Crew is full")
         
         # Join crew
-        await database.queries.join_crew(conn, crew_id, character.id, 'member')
+        await database.queries.join_crew(conn, crew_id=crew_id, character_id=character.id, role='member')
         await conn.commit()
     
     raise web.HTTPFound('/crew')
@@ -279,9 +282,9 @@ async def crew_vault(request: web_request.Request):
         raise web.HTTPFound('/characters')
     
     database = await get_db()
-    async with database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         # Check if character is in a crew
-        crew_data = await database.queries.get_crew_by_character(conn, character.id)
+        crew_data = await database.queries.get_crew_by_character(conn, character_id=character.id)
         if not crew_data:
             raise web.HTTPFound('/crew')
         

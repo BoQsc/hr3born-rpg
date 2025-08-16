@@ -278,7 +278,7 @@ async def register(request: web_request.Request):
     password_hash = f"{pwd_hash}:{salt}"
     
     database = await get_db()
-    async with await database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         try:
             # Check if username exists
             existing_user = await database.queries.get_account_by_username(conn, username=username)

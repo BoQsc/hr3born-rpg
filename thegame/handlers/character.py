@@ -421,7 +421,7 @@ async def inventory(request: web_request.Request):
     
     database = await get_db()
     async with database.get_connection_context() as conn:
-        inventory_data = await database.queries.get_character_inventory(conn, character.id)
+        inventory_data = await database.queries.get_character_inventory(conn, character_id=character.id)
     
     # Group items by slot type
     items_by_slot = {}
@@ -517,7 +517,7 @@ async def equip_item(request: web_request.Request):
     database = await get_db()
     async with database.get_connection_context() as conn:
         # Get item details
-        inventory_items = await database.queries.get_character_inventory(conn, character.id)
+        inventory_items = await database.queries.get_character_inventory(conn, character_id=character.id)
         item = None
         for inv_item in inventory_items:
             if inv_item['item_id'] == item_id:
@@ -533,7 +533,7 @@ async def equip_item(request: web_request.Request):
         
         # Get item's slot
         # We need to get the slot_id from the items table
-        item_details = await conn.execute("SELECT slot_id FROM items WHERE id = ?", (item_id,))
+        item_details = await conn.execute("SELECT slot_id FROM items WHERE id = :item_id", {"item_id": item_id})
         item_detail = await item_details.fetchone()
         if not item_detail:
             raise web.HTTPNotFound()
@@ -541,10 +541,10 @@ async def equip_item(request: web_request.Request):
         slot_id = item_detail[0]
         
         # Equip the item
-        await database.queries.equip_item(conn, character.id, slot_id, item_id)
+        await database.queries.equip_item(conn, character_id=character.id, slot_id=slot_id, item_id=item_id)
         
         # Remove from inventory
-        await database.queries.remove_from_inventory(conn, character.id, item_id)
+        await database.queries.remove_from_inventory(conn, character_id=character.id, item_id=item_id)
         
         await conn.commit()
     

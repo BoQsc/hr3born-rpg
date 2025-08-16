@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "*",
       "Bash(python:*)",
       "Bash(pip install:*)",
       "Bash(mkdir:*)",
@@ -11,7 +10,10 @@
       "Bash(curl:*)",
       "WebSearch",
       "Bash(taskkill:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "*",
+      "Bash(pkill:*)",
+      "Bash(*:*)"
     ],
     "deny": [],
     "ask": []

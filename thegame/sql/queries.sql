@@ -64,7 +64,7 @@ VALUES (:character_id, :item_id, :quantity, :transfers_remaining);
 -- name: remove_from_inventory!
 DELETE FROM character_inventory WHERE character_id = :character_id AND item_id = :item_id;
 
--- name: get_room_info
+-- name: get_room_info^
 SELECT r.*, z.name as zone_name, z.description as zone_description
 FROM rooms r
 JOIN zones z ON r.zone_id = z.id
@@ -89,7 +89,7 @@ ORDER BY c.total_power DESC;
 -- name: create_crew!
 INSERT INTO crews (name, leader_id, description) VALUES (:name, :leader_id, :description);
 
--- name: get_crew_by_character
+-- name: get_crew_by_character^
 SELECT cr.*, c.name as leader_name
 FROM crews cr
 JOIN crew_members cm ON cr.id = cm.crew_id

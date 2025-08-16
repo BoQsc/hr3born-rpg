@@ -14,11 +14,11 @@ async def game_main(request: web_request.Request):
         raise web.HTTPFound('/characters')
     
     database = await get_db()
-    async with database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         # Get current room info
-        room_info = await database.queries.get_room_info(conn, character.current_room_id)
-        connections = await database.queries.get_room_connections(conn, character.current_room_id)
-        characters_in_room = await database.queries.get_characters_in_room(conn, character.current_room_id)
+        room_info = await database.queries.get_room_info(conn, room_id=character.current_room_id)
+        connections = await database.queries.get_room_connections(conn, room_id=character.current_room_id)
+        characters_in_room = await database.queries.get_characters_in_room(conn, room_id=character.current_room_id)
     
     # Build movement options
     movement_html = ""
@@ -176,7 +176,7 @@ async def room_detail(request: web_request.Request):
     room_id = int(request.match_info['room_id'])
     
     database = await get_db()
-    async with database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         room_info = await database.queries.get_room_info(conn, room_id)
         if not room_info:
             raise web.HTTPNotFound()
@@ -261,9 +261,9 @@ async def move_character(request: web_request.Request):
     direction = request.match_info['direction'].lower()
     
     database = await get_db()
-    async with database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         # Get possible connections from current room
-        connections = await database.queries.get_room_connections(conn, character.current_room_id)
+        connections = await database.queries.get_room_connections(conn, room_id=character.current_room_id)
         
         # Find the connection for this direction
         target_room = None
@@ -277,7 +277,7 @@ async def move_character(request: web_request.Request):
             raise web.HTTPBadRequest(text="Invalid direction")
         
         # Move character
-        await database.queries.move_character(conn, target_room, character.id)
+        await database.queries.move_character(conn, room_id=target_room, character_id=character.id)
         await conn.commit()
     
     raise web.HTTPFound('/game')

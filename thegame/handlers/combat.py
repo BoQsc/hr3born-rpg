@@ -21,9 +21,9 @@ async def attack_player(request: web_request.Request):
         raise web.HTTPBadRequest(text="Cannot attack yourself")
     
     database = await get_db()
-    async with database.get_connection() as conn:
+    async with database.get_connection_context() as conn:
         # Get target character
-        target_data = await database.queries.get_character_by_id(conn, target_id)
+        target_data = await database.queries.get_character_by_id(conn, character_id=target_id)
         if not target_data:
             raise web.HTTPNotFound(text="Target character not found")
         
@@ -102,23 +102,23 @@ async def attack_player(request: web_request.Request):
         
         # Update both characters in database
         await database.queries.update_character_stats(
-            conn, attacker.level, attacker.experience, attacker.gold,
-            attacker.rage_current, attacker.rage_max, attacker.hit_points_current,
-            attacker.hit_points_max, attacker.attack, attacker.total_power, attacker.id
+            conn, level=attacker.level, experience=attacker.experience, gold=attacker.gold,
+            rage_current=attacker.rage_current, rage_max=attacker.rage_max, hit_points_current=attacker.hit_points_current,
+            hit_points_max=attacker.hit_points_max, attack=attacker.attack, total_power=attacker.total_power, character_id=attacker.id
         )
         
         await database.queries.update_character_stats(
-            conn, target.level, target.experience, target.gold,
-            target.rage_current, target.rage_max, target.hit_points_current,
-            target.hit_points_max, target.attack, target.total_power, target.id
+            conn, level=target.level, experience=target.experience, gold=target.gold,
+            rage_current=target.rage_current, rage_max=target.rage_max, hit_points_current=target.hit_points_current,
+            hit_points_max=target.hit_points_max, attack=target.attack, total_power=target.total_power, character_id=target.id
         )
         
         # Log combat
         await database.queries.log_combat(
-            conn, attacker.id, target.id, total_damage, counter_damage,
-            attacker.hit_points_current + actual_counter, attacker.hit_points_current,
-            target.hit_points_current + actual_damage, target.hit_points_current,
-            winner_id, experience_gained, gold_gained, 'pvp'
+            conn, attacker_id=attacker.id, defender_id=target.id, attacker_damage=total_damage, defender_damage=counter_damage,
+            attacker_hp_before=attacker.hit_points_current + actual_counter, attacker_hp_after=attacker.hit_points_current,
+            defender_hp_before=target.hit_points_current + actual_damage, defender_hp_after=target.hit_points_current,
+            winner_id=winner_id, experience_gained=experience_gained, gold_gained=gold_gained, combat_type='pvp'
         )
         
         await conn.commit()
@@ -264,8 +264,8 @@ async def combat_history(request: web_request.Request):
         raise web.HTTPFound('/characters')
     
     database = await get_db()
-    async with database.get_connection() as conn:
-        combat_logs = await database.queries.get_combat_history(conn, character.id, character.id)
+    async with database.get_connection_context() as conn:
+        combat_logs = await database.queries.get_combat_history(conn, attacker_id=character.id, target_id=character.id)
     
     # Build combat log HTML
     combat_html = ""
