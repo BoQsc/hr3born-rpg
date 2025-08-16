@@ -15,7 +15,7 @@ class Database:
         self.queries = aiosql.from_path(sql_dir / "queries.sql", "aiosqlite")
         
         # Create database and tables
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(self.db_path, timeout=30.0) as db:
             # Read and execute schema
             schema_path = sql_dir / "schema.sql"
             with open(schema_path, 'r') as f:
@@ -28,8 +28,19 @@ class Database:
         await self._create_basic_items()
             
     async def get_connection(self):
-        conn = await aiosqlite.connect(self.db_path)
+        conn = await aiosqlite.connect(
+            self.db_path,
+            timeout=30.0,  # 30 second timeout
+            isolation_level=None  # Autocommit mode
+        )
         conn.row_factory = aiosqlite.Row  # This makes rows work like dictionaries
+        
+        # Configure SQLite for better concurrency
+        await conn.execute("PRAGMA journal_mode=WAL")
+        await conn.execute("PRAGMA synchronous=NORMAL") 
+        await conn.execute("PRAGMA cache_size=10000")
+        await conn.execute("PRAGMA temp_store=memory")
+        
         return conn
     
     class connection:
@@ -50,16 +61,18 @@ class Database:
     
     async def execute_query(self, query_name, *args, **kwargs):
         """Execute a query and return results"""
-        async with aiosqlite.connect(self.db_path) as conn:
+        async with aiosqlite.connect(self.db_path, timeout=30.0) as conn:
             conn.row_factory = aiosqlite.Row
+            await conn.execute("PRAGMA journal_mode=WAL")
             query_func = getattr(self.queries, query_name)
             result = await query_func(conn, *args, **kwargs)
             return result
     
     async def execute_query_with_commit(self, query_name, *args, **kwargs):
         """Execute a query that modifies data and commit"""
-        async with aiosqlite.connect(self.db_path) as conn:
+        async with aiosqlite.connect(self.db_path, timeout=30.0) as conn:
             conn.row_factory = aiosqlite.Row
+            await conn.execute("PRAGMA journal_mode=WAL")
             query_func = getattr(self.queries, query_name)
             result = await query_func(conn, *args, **kwargs)
             await conn.commit()
@@ -67,7 +80,7 @@ class Database:
         
     async def _create_basic_items(self):
         """Create some basic starter items"""
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(self.db_path, timeout=30.0) as db:
             # Basic weapons
             await db.execute("""
                 INSERT OR IGNORE INTO items (name, slot_id, rarity_id, level_requirement, attack, hit_points, description)

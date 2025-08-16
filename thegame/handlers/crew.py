@@ -289,7 +289,7 @@ async def crew_vault(request: web_request.Request):
             raise web.HTTPFound('/crew')
         
         # Get vault contents
-        vault_items = await database.queries.get_crew_vault(conn, crew_data['id'])
+        vault_items = await database.queries.get_crew_vault(conn, crew_id=crew_data['id'])
     
     # Build vault items HTML
     vault_html = ""
