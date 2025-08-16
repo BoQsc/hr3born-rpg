@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outwar RPG</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .login-form, .character-creation {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            max-width: 400px;
+        }
+        
+        .game-interface {
+            display: none;
+            grid-template-columns: 200px 1fr 200px;
+            gap: 20px;
+            height: 600px;
+        }
+        
+        .sidebar {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .main-content {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-y: auto;
+        }
+        
+        .character-stats {
+            background-color: #333;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .button {
+            background-color: #ffd700;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 2px;
+        }
+        
+        .button:hover {
+            background-color: #ffed4e;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #555;
+            background-color: #333;
+            color: #fff;
+            border-radius: 4px;
+        }
+        
+        .error {
+            color: #ff4444;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #44ff44;
+            margin: 10px 0;
+        }
+        
+        .combat-log {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #555;
+        }
+        
+        .npc-list {
+            margin-top: 20px;
+        }
+        
+        .npc-item {
+            background-color: #333;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .equipment-slot {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+            min-height: 60px;
+            border: 2px solid #555;
+        }
+        
+        .equipped {
+            border-color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Outwar RPG</h1>
+        
+        <!-- Login Form -->
+        <div id="loginForm" class="login-form">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button class="button" onclick="login()">Login</button>
+            <button class="button" onclick="showRegister()">Register</button>
+            <div id="loginError" class="error"></div>
+        </div>
+        
+        <!-- Registration Form -->
+        <div id="registerForm" class="login-form" style="display:none;">
+            <h2>Register</h2>
+            <input type="text" id="regUsername" placeholder="Username">
+            <input type="email" id="regEmail" placeholder="Email">
+            <input type="password" id="regPassword" placeholder="Password">
+            <button class="button" onclick="register()">Register</button>
+            <button class="button" onclick="showLogin()">Back to Login</button>
+            <div id="registerError" class="error"></div>
+        </div>
+        
+        <!-- Character Creation -->
+        <div id="characterCreation" class="character-creation" style="display:none;">
+            <h2>Create Character</h2>
+            <input type="text" id="charName" placeholder="Character Name">
+            <select id="charClass">
+                <option value="gangster">Gangster (+5% Attack, +10% Defense)</option>
+                <option value="monster">Monster (+5% Rage/Turn, +10% Max Rage)</option>
+                <option value="popstar">Pop Star (Balanced bonuses)</option>
+            </select>
+            <button class="button" onclick="createCharacter()">Create Character</button>
+            <div id="charError" class="error"></div>
+        </div>
+        
+        <!-- Game Interface -->
+        <div id="gameInterface" class="game-interface">
+            <!-- Left Sidebar -->
+            <div class="sidebar">
+                <h3>Navigation</h3>
+                <button class="button" onclick="showCharacterStats()">Character</button>
+                <button class="button" onclick="showEquipment()">Equipment</button>
+                <button class="button" onclick="showCombat()">Combat</button>
+                <button class="button" onclick="showWorld()">World</button>
+                <button class="button" onclick="logout()">Logout</button>
+                
+                <div id="characterInfo" class="character-stats">
+                    <h4>Character Info</h4>
+                    <div id="charBasicInfo"></div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="main-content">
+                <div id="mainContent">
+                    <h2>Welcome to Outwar RPG</h2>
+                    <p>Select an option from the navigation menu to begin.</p>
+                </div>
+            </div>
+            
+            <!-- Right Sidebar -->
+            <div class="sidebar">
+                <h3>Quest Helper</h3>
+                <div id="questInfo">
+                    <p>No active quests</p>
+                </div>
+                
+                <h3>Online Players</h3>
+                <div id="onlinePlayers">
+                    <p>Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = null;
+        let currentCharacter = null;
+        
+        // Initialize app
+        if (authToken) {
+            getCurrentUser();
+        }
+        
+        function showLogin() {
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+        }
+        
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        }
+        
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    currentUser = data.user;
+                    showGameInterface();
+                } else {
+                    document.getElementById('loginError').textContent = data.error;
+                }
+            } catch (error) {
+                document.getElementById('loginError').textContent = 'Login failed: ' + error.message;
+            }
+        }
+        
+        async function register() {
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('registerError').innerHTML = '<span class="success">Registration successful! Please login.</span>';
+                    setTimeout(showLogin, 2000);
+                } else {
+                    document.getElementById('registerError').textContent = data.error;
+                }
+            } catch (error) {
+                document.getElementById('registerError').textContent = 'Registration failed: ' + error.message;
+            }
+        }
+        
+        async function getCurrentUser() {
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data.user;
+                    
+                    if (data.characters && data.characters.length > 0) {
+                        currentCharacter = data.characters[0];
+                        showGameInterface();
+                    } else {
+                        showCharacterCreation();
+                    }
+                } else {
+                    logout();
+                }
+            } catch (error) {
+                logout();
+            }
+        }
+        
+        function showCharacterCreation() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('characterCreation').style.display = 'block';
+        }
+        
+        async function createCharacter() {
+            const name = document.getElementById('charName').value;
+            const character_class = document.getElementById('charClass').value;
+            
+            try {
+                const response = await fetch('/api/characters', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ name, character_class })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentCharacter = data.character;
+                    showGameInterface();
+                } else {
+                    document.getElementById('charError').textContent = data.error;
+                }
+            } catch (error) {
+                document.getElementById('charError').textContent = 'Character creation failed: ' + error.message;
+            }
+        }
+        
+        function showGameInterface() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('characterCreation').style.display = 'none';
+            document.getElementById('gameInterface').style.display = 'grid';
+            
+            updateCharacterInfo();
+        }
+        
+        function updateCharacterInfo() {
+            if (currentCharacter) {
+                document.getElementById('charBasicInfo').innerHTML = `
+                    <strong>${currentCharacter.name}</strong><br>
+                    Level ${currentCharacter.level} ${currentCharacter.character_class}<br>
+                    HP: ${currentCharacter.combat_stats.current_hp}/${currentCharacter.combat_stats.hit_points}<br>
+                    Gold: ${currentCharacter.resources.gold}<br>
+                    Attack: ${currentCharacter.combat_stats.attack}
+                `;
+            }
+        }
+        
+        function showCharacterStats() {
+            document.getElementById('mainContent').innerHTML = `
+                <h2>Character Stats</h2>
+                <div class="character-stats">
+                    <h3>${currentCharacter.name}</h3>
+                    <p><strong>Class:</strong> ${currentCharacter.character_class}</p>
+                    <p><strong>Level:</strong> ${currentCharacter.level}</p>
+                    <p><strong>Experience:</strong> ${currentCharacter.experience}</p>
+                    <p><strong>Total Power:</strong> ${currentCharacter.total_power}</p>
+                    
+                    <h4>Combat Stats</h4>
+                    <p>Attack: ${currentCharacter.combat_stats.attack}</p>
+                    <p>Hit Points: ${currentCharacter.combat_stats.hit_points}</p>
+                    <p>Current HP: ${currentCharacter.combat_stats.current_hp}</p>
+                    <p>Elemental Attack: ${currentCharacter.combat_stats.elemental_attack}</p>
+                    
+                    <h4>Resources</h4>
+                    <p>Gold: ${currentCharacter.resources.gold}</p>
+                    <p>Rage: ${currentCharacter.resources.rage}/${currentCharacter.resources.max_rage}</p>
+                    <p>Rage/Hour: ${currentCharacter.resources.rage_per_hour}</p>
+                    <p>Exp/Hour: ${currentCharacter.resources.exp_per_hour}</p>
+                </div>
+            `;
+        }
+        
+        function showEquipment() {
+            document.getElementById('mainContent').innerHTML = `
+                <h2>Equipment</h2>
+                <div class="equipment-grid">
+                    <div class="equipment-slot">Accessory 1</div>
+                    <div class="equipment-slot">Head</div>
+                    <div class="equipment-slot">Accessory 2</div>
+                    <div class="equipment-slot">Weapon</div>
+                    <div class="equipment-slot">Chest</div>
+                    <div class="equipment-slot">Shield</div>
+                    <div class="equipment-slot">Ring 1</div>
+                    <div class="equipment-slot">Legs</div>
+                    <div class="equipment-slot">Ring 2</div>
+                </div>
+                <div class="equipment-slot" style="width: 200px; margin: 0 auto;">Boots</div>
+                
+                <h3>Inventory</h3>
+                <div id="inventoryItems">Loading inventory...</div>
+            `;
+            
+            loadInventory();
+        }
+        
+        async function loadInventory() {
+            try {
+                const response = await fetch(`/api/characters/${currentCharacter.id}/items`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayInventory(data.items);
+                }
+            } catch (error) {
+                console.error('Failed to load inventory:', error);
+            }
+        }
+        
+        function displayInventory(items) {
+            const container = document.getElementById('inventoryItems');
+            if (items.length === 0) {
+                container.innerHTML = '<p>No items in inventory</p>';
+                return;
+            }
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">';
+            items.forEach(item => {
+                html += `
+                    <div class="equipment-slot ${item.state.is_equipped ? 'equipped' : ''}">
+                        <strong>${item.template.name}</strong><br>
+                        <small>${item.template.rarity}</small>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        function showCombat() {
+            document.getElementById('mainContent').innerHTML = `
+                <h2>Combat</h2>
+                <div class="npc-list">
+                    <h3>Available Enemies</h3>
+                    <div id="npcList">Loading NPCs...</div>
+                </div>
+                
+                <div class="combat-log">
+                    <div id="combatLog">Combat log will appear here...</div>
+                </div>
+            `;
+            
+            loadNPCs();
+        }
+        
+        async function loadNPCs() {
+            // This would load NPCs from current room
+            document.getElementById('npcList').innerHTML = `
+                <div class="npc-item">
+                    <div>
+                        <strong>Training Dummy</strong><br>
+                        Level 1 - Perfect for beginners
+                    </div>
+                    <button class="button" onclick="attackNPC('dummy1')">Attack</button>
+                </div>
+            `;
+        }
+        
+        async function attackNPC(npcId) {
+            document.getElementById('combatLog').innerHTML = 'Initiating combat...';
+            // This would call the combat API
+        }
+        
+        function showWorld() {
+            document.getElementById('mainContent').innerHTML = `
+                <h2>World Map</h2>
+                <p>You are currently in: <strong>Training Grounds</strong></p>
+                <p>Diamond City - Room 1</p>
+                
+                <h3>Available Locations</h3>
+                <div>
+                    <button class="button" onclick="moveToRoom('training')">Training Grounds</button>
+                    <button class="button" onclick="moveToRoom('casino')">Underground Casino</button>
+                    <button class="button" onclick="moveToRoom('arena')">Fight Arena</button>
+                </div>
+                
+                <h3>Players in Area</h3>
+                <div id="roomPlayers">Loading...</div>
+            `;
+        }
+        
+        function moveToRoom(roomName) {
+            document.getElementById('mainContent').innerHTML += `<p>Moving to ${roomName}...</p>`;
+        }
+        
+        function logout() {
+            localStorage.removeItem('authToken');
+            authToken = null;
+            currentUser = null;
+            currentCharacter = null;
+            
+            document.getElementById('gameInterface').style.display = 'none';
+            document.getElementById('characterCreation').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
