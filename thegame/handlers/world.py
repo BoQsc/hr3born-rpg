@@ -192,7 +192,7 @@ async def game_main(request: web_request.Request):
                 <span class="character-name" onclick="showCharacterDropdown()" title="Click to switch characters">{character.name}</span>
                 <span class="status-indicator" title="Online">🔴</span>
                 <span class="game-time" title="Current game time">🕐 {character.id % 12 + 1}:{(character.id * 7) % 60:02d}am</span>
-                <span class="level-stat" title="Experience to next level: {character.experience_to_next_level:,} XP">Level: {character.level}</span>
+                <span class="level-stat" title="Experience to next level: {character.experience_needed_for_next_level():,} XP">Level: {character.level}</span>
                 <span class="exp-stat" title="Total Experience Points earned">EXP: {character.experience:,}</span>
                 <span class="rage-stat" title="Current Rage: {character.rage_current}/{character.rage_max} | Rage regenerates over time">RAGE: {character.rage_current}</span>
             </div>
@@ -371,6 +371,183 @@ async def game_main(request: web_request.Request):
                 }}
             }}
         }}
+        
+        function showCharacterDropdown() {{
+            // Toggle character dropdown visibility
+            let dropdown = document.querySelector('.character-dropdown');
+            if (!dropdown) {{
+                // Create dropdown if it doesn't exist
+                dropdown = document.createElement('div');
+                dropdown.className = 'character-dropdown';
+                dropdown.innerHTML = `
+                    <div class="dropdown-item" onclick="switchCharacter('{character.id}')">
+                        <strong>{character.name}</strong> (Level {character.level}) - Current
+                    </div>
+                    <div class="dropdown-item" onclick="window.location.href='/characters'">
+                        ➕ Create New Character
+                    </div>
+                    <div class="dropdown-item" onclick="window.location.href='/characters'">
+                        🔄 Switch Character
+                    </div>
+                `;
+                document.body.appendChild(dropdown);
+            }}
+            dropdown.classList.toggle('show');
+        }}
+        
+        function switchCharacter(characterId) {{
+            // Hide dropdown
+            document.querySelector('.character-dropdown').classList.remove('show');
+            if (characterId !== '{character.id}') {{
+                window.location.href = '/characters';
+            }}
+        }}
+        
+        function openFloatingWindow(type) {{
+            // Close any existing floating windows
+            document.querySelectorAll('.floating-window').forEach(w => w.classList.remove('show'));
+            
+            let window = document.getElementById(type + 'Window');
+            if (!window) {{
+                // Create floating window
+                window = document.createElement('div');
+                window.id = type + 'Window';
+                window.className = 'floating-window';
+                window.style.left = '50%';
+                window.style.top = '50%';
+                window.style.transform = 'translate(-50%, -50%)';
+                
+                let content = '';
+                switch(type) {{
+                    case 'equipment':
+                        content = `
+                            <div class="window-header">
+                                <span class="window-title">⚔️ Equipment Manager</span>
+                                <span class="window-close" onclick="closeFloatingWindow('${{type}}')">&times;</span>
+                            </div>
+                            <div class="window-content">
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="margin-bottom: 15px;">🛡️ Equipment slots and stats</div>
+                                    <div style="margin-bottom: 15px;">⚔️ Total damage: {character.get_total_elemental_damage()}</div>
+                                    <div style="margin-bottom: 15px;">🛡️ Total defense: {character.get_effective_defense()}</div>
+                                    <button onclick="window.location.href='/character/{character.id}'" style="padding: 8px 16px; background: #ffd700; color: #000; border: none; border-radius: 4px; cursor: pointer;">View Full Equipment</button>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'inventory':
+                        content = `
+                            <div class="window-header">
+                                <span class="window-title">🎒 Inventory</span>
+                                <span class="window-close" onclick="closeFloatingWindow('${{type}}')">&times;</span>
+                            </div>
+                            <div class="window-content">
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="margin-bottom: 15px;">📦 Quick inventory access</div>
+                                    <div style="margin-bottom: 15px;">💰 Gold: {character.gold:,}</div>
+                                    <div style="margin-bottom: 15px;">🎒 Items: Coming soon</div>
+                                    <button onclick="window.location.href='/inventory'" style="padding: 8px 16px; background: #ffd700; color: #000; border: none; border-radius: 4px; cursor: pointer;">Open Full Inventory</button>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'stats':
+                        content = `
+                            <div class="window-header">
+                                <span class="window-title">📊 Character Stats</span>
+                                <span class="window-close" onclick="closeFloatingWindow('${{type}}')">&times;</span>
+                            </div>
+                            <div class="window-content">
+                                <div style="padding: 20px;">
+                                    <div style="margin-bottom: 10px;"><strong>Level:</strong> {character.level}</div>
+                                    <div style="margin-bottom: 10px;"><strong>Experience:</strong> {character.experience:,}</div>
+                                    <div style="margin-bottom: 10px;"><strong>Health:</strong> {character.hit_points_current}/{character.hit_points_max}</div>
+                                    <div style="margin-bottom: 10px;"><strong>Rage:</strong> {character.rage_current}/{character.rage_max}</div>
+                                    <div style="margin-bottom: 15px;"><strong>Power:</strong> {character.total_power:,}</div>
+                                    <button onclick="window.location.href='/character/{character.id}'" style="padding: 8px 16px; background: #ffd700; color: #000; border: none; border-radius: 4px; cursor: pointer;">Detailed Stats</button>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'tools':
+                        content = `
+                            <div class="window-header">
+                                <span class="window-title">🔧 Game Tools</span>
+                                <span class="window-close" onclick="closeFloatingWindow('${{type}}')">&times;</span>
+                            </div>
+                            <div class="window-content">
+                                <div style="padding: 20px;">
+                                    <div style="margin-bottom: 10px;"><button onclick="window.location.href='/marketplace'" style="width: 100%; padding: 8px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px;">🛒 Marketplace</button></div>
+                                    <div style="margin-bottom: 10px;"><button onclick="window.location.href='/rankings'" style="width: 100%; padding: 8px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px;">🏆 Rankings</button></div>
+                                    <div style="margin-bottom: 10px;"><button onclick="window.location.href='/crew'" style="width: 100%; padding: 8px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px;">👥 Crew</button></div>
+                                    <div style="margin-bottom: 10px;"><button onclick="window.location.href='/quests'" style="width: 100%; padding: 8px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px;">📜 Quests</button></div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                }}
+                
+                window.innerHTML = content;
+                document.body.appendChild(window);
+                
+                // Make window draggable
+                makeDraggable(window);
+            }}
+            
+            window.classList.add('show');
+        }}
+        
+        function closeFloatingWindow(type) {{
+            const window = document.getElementById(type + 'Window');
+            if (window) {{
+                window.classList.remove('show');
+            }}
+        }}
+        
+        function makeDraggable(element) {{
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            const header = element.querySelector('.window-header');
+            
+            if (header) {{
+                header.onmousedown = dragMouseDown;
+            }}
+            
+            function dragMouseDown(e) {{
+                e = e || window.event;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }}
+            
+            function elementDrag(e) {{
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                element.style.transform = 'none';
+            }}
+            
+            function closeDragElement() {{
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }}
+        }}
+        
+        // Close dropdowns/windows when clicking outside
+        document.addEventListener('click', function(event) {{
+            if (!event.target.closest('.character-name') && !event.target.closest('.character-dropdown')) {{
+                const dropdown = document.querySelector('.character-dropdown');
+                if (dropdown) {{
+                    dropdown.classList.remove('show');
+                }}
+            }}
+        }});
         </script>
     </body>
     </html>
