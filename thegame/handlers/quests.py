@@ -26,10 +26,11 @@ async def quest_helper(request: web_request.Request):
         <title>Quest Helper - Outwar</title>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            body {{ font-family: Arial, sans-serif; color: #ffffff; }}
             
             /* Quest Background */
-            .quest-bg {{ 
+            body.quest-bg {{ 
+                background-color: #2d2d0a !important;
                 background: linear-gradient(135deg, #2d2d0a 0%, #4a4a1a 50%, #2d2d0a 100%);
                 min-height: 100vh;
                 background-image: 

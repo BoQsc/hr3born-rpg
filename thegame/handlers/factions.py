@@ -36,10 +36,10 @@ async def factions_main(request: web_request.Request):
         <title>Faction Wars - Outwar</title>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            body {{ font-family: Arial, sans-serif; color: #ffffff; }}
             
             /* Faction Background */
-            .faction-bg {{ 
+            body.faction-bg {{ 
                 background: linear-gradient(135deg, #2d0a0a 0%, #4a0a0a 25%, #0a2d0a 50%, #0a0a2d 75%, #2d0a0a 100%);
                 min-height: 100vh;
                 background-image: 

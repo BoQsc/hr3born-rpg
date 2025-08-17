@@ -24,10 +24,10 @@ async def treasury_main(request: web_request.Request):
         <title>Treasury - Outwar</title>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            body {{ font-family: Arial, sans-serif; color: #ffffff; }}
             
             /* Treasury Background */
-            .treasury-bg {{ 
+            body.treasury-bg {{ 
                 background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
                 min-height: 100vh;
                 background-image: 

@@ -1,0 +1,504 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Quest Helper - Outwar</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; color: #ffffff; }
+            
+            /* Quest Background */
+            body.quest-bg { 
+                background: linear-gradient(135deg, #2d2d0a 0%, #4a4a1a 50%, #2d2d0a 100%);
+                min-height: 100vh;
+                background-image: 
+                    radial-gradient(circle at 20% 50%, rgba(255, 255, 0, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 30%, rgba(255, 215, 0, 0.1) 0%, transparent 50%);
+            }
+            
+            /* Top Navigation */
+            .top-nav { background: linear-gradient(180deg, #000 0%, #333 100%); height: 40px; display: flex; }
+            .nav-tab { padding: 8px 20px; color: #ccc; cursor: pointer; border-radius: 8px 8px 0 0; }
+            .nav-tab.active { background: linear-gradient(180deg, #ff8c00 0%, #ffd700 100%); color: #000; font-weight: bold; }
+            
+            /* Header Status Bar */
+            .status-bar { background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%); height: 30px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #000; font-size: 11px; font-weight: bold; }
+            .status-left { display: flex; gap: 15px; align-items: center; }
+            .status-right { display: flex; gap: 10px; }
+            .status-icon { width: 16px; height: 16px; border-radius: 50%; background: #333; }
+            
+            /* Main Container */
+            .main-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+            
+            /* Quest Header */
+            .quest-header { background: rgba(45, 45, 45, 0.9); border: 1px solid #ffd700; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center; }
+            .quest-title { color: #ffd700; font-size: 32px; font-weight: bold; margin-bottom: 10px; }
+            .quest-subtitle { color: #ffeb3b; font-size: 16px; margin-bottom: 15px; }
+            
+            /* Search Section */
+            .search-section { background: rgba(45, 45, 45, 0.9); border: 1px solid #ffd700; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+            .search-title { color: #ffd700; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+            .search-controls { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+            .search-input { 
+                flex: 1;
+                min-width: 200px;
+                padding: 10px;
+                background: #333;
+                border: 1px solid #666;
+                border-radius: 5px;
+                color: white;
+                font-size: 14px;
+            }
+            .search-btn { 
+                padding: 10px 20px;
+                background: linear-gradient(45deg, #ffd700, #ffeb3b);
+                color: #000;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: bold;
+            }
+            .filter-select { 
+                padding: 8px;
+                background: #333;
+                border: 1px solid #666;
+                border-radius: 5px;
+                color: white;
+            }
+            
+            /* Quest Grid */
+            .quests-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; margin-bottom: 30px; }
+            
+            /* Quest Cards */
+            .quest-card { 
+                background: rgba(45, 45, 45, 0.9);
+                border: 2px solid #555;
+                border-radius: 12px;
+                padding: 20px;
+                transition: all 0.3s;
+                position: relative;
+            }
+            .quest-card:hover { border-color: #ffd700; transform: translateY(-3px); }
+            .quest-card.daily { border-color: #32cd32; }
+            .quest-card.weekly { border-color: #ff6600; }
+            .quest-card.main { border-color: #ffd700; }
+            .quest-card.side { border-color: #87ceeb; }
+            
+            .quest-type { 
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+            .type-daily { background: #32cd32; color: white; }
+            .type-weekly { background: #ff6600; color: white; }
+            .type-main { background: #ffd700; color: #000; }
+            .type-side { background: #87ceeb; color: #000; }
+            
+            .quest-icon { font-size: 32px; margin-bottom: 10px; }
+            .quest-name { font-size: 18px; font-weight: bold; color: #ffd700; margin-bottom: 8px; }
+            .quest-giver { color: #87ceeb; font-size: 12px; margin-bottom: 10px; }
+            .quest-description { color: #ccc; margin-bottom: 15px; line-height: 1.4; font-size: 13px; }
+            
+            .quest-objectives { margin-bottom: 15px; }
+            .objective-title { color: #ffd700; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+            .objective-item { 
+                background: #333;
+                padding: 6px 10px;
+                border-radius: 4px;
+                margin: 3px 0;
+                font-size: 11px;
+                border-left: 3px solid #ffd700;
+            }
+            
+            .quest-rewards { margin-bottom: 15px; }
+            .rewards-title { color: #32cd32; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+            .reward-item { 
+                display: inline-block;
+                background: #444;
+                padding: 3px 6px;
+                border-radius: 3px;
+                margin: 2px;
+                font-size: 10px;
+            }
+            .reward-exp { color: #87ceeb; }
+            .reward-gold { color: #ffd700; }
+            .reward-item-drop { color: #ff8c00; }
+            
+            .quest-location { color: #90ee90; font-size: 11px; margin-bottom: 15px; }
+            .quest-level { color: #ccc; font-size: 11px; margin-bottom: 15px; }
+            
+            .quest-actions { display: flex; gap: 10px; }
+            .quest-btn { 
+                flex: 1;
+                padding: 8px;
+                font-size: 12px;
+                font-weight: bold;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+            .btn-accept { background: linear-gradient(45deg, #32cd32, #90ee90); color: white; }
+            .btn-accept:hover { background: linear-gradient(45deg, #90ee90, #98fb98); }
+            .btn-track { background: linear-gradient(45deg, #ffd700, #ffeb3b); color: #000; }
+            .btn-track:hover { background: linear-gradient(45deg, #ffeb3b, #ffff00); }
+            .btn-navigate { background: linear-gradient(45deg, #87ceeb, #add8e6); color: #000; }
+            .btn-navigate:hover { background: linear-gradient(45deg, #add8e6, #b0e0e6); }
+            .btn-unavailable { background: #666; color: #999; cursor: not-allowed; }
+            
+            /* Active Quest Tracker */
+            .active-tracker { 
+                position: fixed;
+                top: 100px;
+                right: 20px;
+                width: 300px;
+                background: rgba(45, 45, 45, 0.95);
+                border: 2px solid #ffd700;
+                border-radius: 10px;
+                padding: 15px;
+                z-index: 1000;
+            }
+            .tracker-title { color: #ffd700; font-size: 14px; font-weight: bold; margin-bottom: 10px; text-align: center; }
+            .tracked-quest { margin-bottom: 10px; }
+            .tracked-name { color: #87ceeb; font-size: 12px; font-weight: bold; }
+            .tracked-progress { color: #ccc; font-size: 11px; }
+            .progress-bar { 
+                width: 100%;
+                height: 6px;
+                background: #333;
+                border-radius: 3px;
+                overflow: hidden;
+                margin: 3px 0;
+            }
+            .progress-fill { 
+                height: 100%;
+                background: linear-gradient(90deg, #32cd32, #90ee90);
+                transition: width 0.3s;
+            }
+            
+            /* Quest Log */
+            .quest-log { background: rgba(45, 45, 45, 0.9); border: 1px solid #ffd700; border-radius: 8px; padding: 20px; margin-top: 20px; }
+            .log-title { color: #ffd700; font-size: 18px; font-weight: bold; margin-bottom: 15px; text-align: center; }
+            .log-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
+            .log-tab { padding: 8px 16px; background: #444; color: white; border: none; border-radius: 5px; cursor: pointer; }
+            .log-tab.active { background: #ffd700; color: #000; }
+        </style>
+    </head>
+    <body class="quest-bg">
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="nav-tab" onclick="window.location.href='/game'">Explore World</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Challenges</div>
+            <div class="nav-tab" onclick="window.location.href='/marketplace'">Marketplace</div>
+            <div class="nav-tab" onclick="window.location.href='/rankings'">Rankings</div>
+            <div class="nav-tab" onclick="window.location.href='/casino'">Casino</div>
+            <div class="nav-tab" onclick="window.location.href='/wilderness'">Wilderness</div>
+        </div>
+        
+        <!-- Header Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span>EquippedHero</span>
+                <span>🔴</span>
+                <span>🕐 6:35am</span>
+                <span>Level: 1</span>
+                <span>EXP: 0</span>
+                <span>RAGE: 55</span>
+            </div>
+            <div class="status-right">
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+            </div>
+        </div>
+        
+        <!-- Main Container -->
+        <div class="main-container">
+            <!-- Quest Header -->
+            <div class="quest-header">
+                <div class="quest-title">📜 QUEST HELPER</div>
+                <div class="quest-subtitle">Find and track your adventures • Discover new challenges • Earn great rewards</div>
+            </div>
+            
+            <!-- Search Section -->
+            <div class="search-section">
+                <div class="search-title">🔍 QUEST SEARCH</div>
+                <div class="search-controls">
+                    <input type="text" class="search-input" id="questSearch" placeholder="Search for quests, NPCs, or locations..." value="">
+                    <select class="filter-select" id="questFilter">
+                        <option value="all">All Quests</option>
+                        <option value="daily">Daily Quests</option>
+                        <option value="weekly">Weekly Quests</option>
+                        <option value="main">Main Story</option>
+                        <option value="side">Side Quests</option>
+                    </select>
+                    <select class="filter-select" id="levelFilter">
+                        <option value="all">All Levels</option>
+                        <option value="mylevel">My Level (1)</option>
+                        <option value="lower">Below My Level</option>
+                        <option value="higher">Above My Level</option>
+                    </select>
+                    <button class="search-btn" onclick="searchQuests()">SEARCH</button>
+                </div>
+            </div>
+            
+            <!-- Available Quests -->
+            <div class="quests-container">
+                
+        <div class="quest-card daily">
+            <div class="quest-type type-daily">daily</div>
+            <div class="quest-icon">⚔️</div>
+            <div class="quest-name">Combat Training</div>
+            <div class="quest-giver">Quest Giver: Combat Instructor Marcus</div>
+            <div class="quest-description">Practice your combat skills by defeating training dummies and sparring with other warriors.</div>
+            
+            <div class="quest-objectives">
+                <div class="objective-title">Objectives:</div>
+                <div class="objective-item">Defeat 5 training dummies</div><div class="objective-item">Win 2 sparring matches</div>
+            </div>
+            
+            <div class="quest-rewards">
+                <div class="rewards-title">Rewards:</div>
+                <span class="reward-item reward-exp">1,500 EXP</span><span class="reward-item reward-gold">2,000 Gold</span><span class="reward-item reward-item-drop">Combat Manual</span>
+            </div>
+            
+            <div class="quest-location">📍 Location: Training Grounds</div>
+            <div class="quest-level">⭐ Required Level: 1</div>
+            
+            <div class="quest-actions">
+                
+            <button class="quest-btn btn-accept" onclick="acceptQuest('daily_combat_training', 'Combat Training')">ACCEPT</button>
+            <button class="quest-btn btn-track" onclick="trackQuest('daily_combat_training')">TRACK</button>
+            <button class="quest-btn btn-navigate" onclick="navigateToQuest('Training Grounds')">NAVIGATE</button>
+            
+            </div>
+        </div>
+        
+        <div class="quest-card weekly">
+            <div class="quest-type type-weekly">weekly</div>
+            <div class="quest-icon">🗺️</div>
+            <div class="quest-name">Explore the Unknown</div>
+            <div class="quest-giver">Quest Giver: Explorer Captain Sarah</div>
+            <div class="quest-description">Venture into uncharted territories and document your discoveries for the Explorer's Guild.</div>
+            
+            <div class="quest-objectives">
+                <div class="objective-title">Objectives:</div>
+                <div class="objective-item">Visit 3 new locations</div><div class="objective-item">Collect 10 rare specimens</div><div class="objective-item">Map unknown areas</div>
+            </div>
+            
+            <div class="quest-rewards">
+                <div class="rewards-title">Rewards:</div>
+                <span class="reward-item reward-exp">5,000 EXP</span><span class="reward-item reward-gold">10,000 Gold</span><span class="reward-item reward-item-drop">Explorer's Badge</span>
+            </div>
+            
+            <div class="quest-location">📍 Location: Adventure Guild</div>
+            <div class="quest-level">⭐ Required Level: 5</div>
+            
+            <div class="quest-actions">
+                <button class="quest-btn btn-unavailable">LEVEL LOCKED</button>
+            </div>
+        </div>
+        
+        <div class="quest-card main">
+            <div class="quest-type type-main">main</div>
+            <div class="quest-icon">🐲</div>
+            <div class="quest-name">The Dragon Threat</div>
+            <div class="quest-giver">Quest Giver: King Aldric</div>
+            <div class="quest-description">Ancient dragons have awakened and threaten the kingdom. Investigate their return and find a way to stop them.</div>
+            
+            <div class="quest-objectives">
+                <div class="objective-title">Objectives:</div>
+                <div class="objective-item">Investigate dragon sightings</div><div class="objective-item">Gather ancient dragon lore</div><div class="objective-item">Prepare for final battle</div>
+            </div>
+            
+            <div class="quest-rewards">
+                <div class="rewards-title">Rewards:</div>
+                <span class="reward-item reward-exp">25,000 EXP</span><span class="reward-item reward-gold">50,000 Gold</span><span class="reward-item reward-item-drop">Royal Commendation</span><span class="reward-item reward-item-drop">Dragon Slayer Title</span>
+            </div>
+            
+            <div class="quest-location">📍 Location: Royal Throne Room</div>
+            <div class="quest-level">⭐ Required Level: 30</div>
+            
+            <div class="quest-actions">
+                <button class="quest-btn btn-unavailable">LEVEL LOCKED</button>
+            </div>
+        </div>
+        
+        <div class="quest-card side">
+            <div class="quest-type type-side">side</div>
+            <div class="quest-icon">💰</div>
+            <div class="quest-name">Merchant's Troubles</div>
+            <div class="quest-giver">Quest Giver: Merchant Bob</div>
+            <div class="quest-description">Local merchant is having trouble with bandits stealing his goods. Help him secure his trade routes.</div>
+            
+            <div class="quest-objectives">
+                <div class="objective-title">Objectives:</div>
+                <div class="objective-item">Eliminate bandit camp</div><div class="objective-item">Recover stolen goods</div><div class="objective-item">Escort merchant convoy</div>
+            </div>
+            
+            <div class="quest-rewards">
+                <div class="rewards-title">Rewards:</div>
+                <span class="reward-item reward-exp">3,000 EXP</span><span class="reward-item reward-gold">5,000 Gold</span><span class="reward-item reward-item-drop">Merchant Discount</span>
+            </div>
+            
+            <div class="quest-location">📍 Location: Marketplace</div>
+            <div class="quest-level">⭐ Required Level: 10</div>
+            
+            <div class="quest-actions">
+                <button class="quest-btn btn-unavailable">LEVEL LOCKED</button>
+            </div>
+        </div>
+        
+        <div class="quest-card daily">
+            <div class="quest-type type-daily">daily</div>
+            <div class="quest-icon">🌿</div>
+            <div class="quest-name">Herb Gathering</div>
+            <div class="quest-giver">Quest Giver: Herbalist Elena</div>
+            <div class="quest-description">Collect medicinal herbs from the wilderness for the local herbalist.</div>
+            
+            <div class="quest-objectives">
+                <div class="objective-title">Objectives:</div>
+                <div class="objective-item">Collect 20 healing herbs</div><div class="objective-item">Find 5 rare mushrooms</div>
+            </div>
+            
+            <div class="quest-rewards">
+                <div class="rewards-title">Rewards:</div>
+                <span class="reward-item reward-exp">800 EXP</span><span class="reward-item reward-gold">1,200 Gold</span><span class="reward-item reward-item-drop">Health Potion x3</span>
+            </div>
+            
+            <div class="quest-location">📍 Location: Alchemist Shop</div>
+            <div class="quest-level">⭐ Required Level: 1</div>
+            
+            <div class="quest-actions">
+                
+            <button class="quest-btn btn-accept" onclick="acceptQuest('daily_herb_gathering', 'Herb Gathering')">ACCEPT</button>
+            <button class="quest-btn btn-track" onclick="trackQuest('daily_herb_gathering')">TRACK</button>
+            <button class="quest-btn btn-navigate" onclick="navigateToQuest('Alchemist Shop')">NAVIGATE</button>
+            
+            </div>
+        </div>
+        
+            </div>
+            
+            <!-- Quest Log -->
+            <div class="quest-log">
+                <div class="log-title">📋 QUEST LOG</div>
+                <div class="log-tabs">
+                    <button class="log-tab active" onclick="switchLogTab('active')">Active Quests</button>
+                    <button class="log-tab" onclick="switchLogTab('completed')">Completed</button>
+                    <button class="log-tab" onclick="switchLogTab('failed')">Failed</button>
+                </div>
+                <div id="activeQuests">
+                    
+    <div style="text-align: center; color: #ccc; padding: 20px;">
+        <div style="font-size: 18px; margin-bottom: 10px;">📜 No Active Quests</div>
+        <div>Accept quests from NPCs to start your adventures!</div>
+    </div>
+    
+                </div>
+                <div id="completedQuests" style="display: none;">
+                    
+    <div style="text-align: center; color: #ccc; padding: 20px;">
+        <div style="font-size: 18px; margin-bottom: 10px;">✅ No Completed Quests</div>
+        <div>Complete quests to see your achievements here!</div>
+    </div>
+    
+                </div>
+                <div id="failedQuests" style="display: none;">
+                    
+    <div style="text-align: center; color: #ccc; padding: 20px;">
+        <div style="font-size: 18px; margin-bottom: 10px;">❌ No Failed Quests</div>
+        <div>Failed quests will appear here. Don't give up!</div>
+    </div>
+    
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Quest Tracker -->
+        <div class="active-tracker">
+            <div class="tracker-title">🎯 ACTIVE QUESTS</div>
+            
+    <div style="text-align: center; color: #ccc; padding: 10px;">
+        <div style="font-size: 14px; margin-bottom: 5px;">No tracked quests</div>
+        <div style="font-size: 11px;">Accept and track quests to see progress here</div>
+    </div>
+    
+        </div>
+        
+        <script>
+        function searchQuests() {
+            const searchTerm = document.getElementById('questSearch').value;
+            const filter = document.getElementById('questFilter').value;
+            const levelFilter = document.getElementById('levelFilter').value;
+            
+            const params = new URLSearchParams();
+            if (searchTerm) params.append('search', searchTerm);
+            if (filter !== 'all') params.append('filter', filter);
+            if (levelFilter !== 'all') params.append('level', levelFilter);
+            
+            window.location.href = '/quests?' + params.toString();
+        }
+        
+        function acceptQuest(questId, questName) {
+            if (confirm(`Accept quest: ${questName}?`)) {
+                fetch(`/quests/accept/${questId}`, {method: 'POST'})
+                .then(response => {
+                    if (response.ok) {
+                        alert('Quest accepted! Check your quest log for objectives.');
+                        location.reload();
+                    } else {
+                        alert('Failed to accept quest.');
+                    }
+                });
+            }
+        }
+        
+        function trackQuest(questId) {
+            fetch(`/quests/track/${questId}`, {method: 'POST'})
+            .then(response => {
+                if (response.ok) {
+                    alert('Quest is now being tracked!');
+                    location.reload();
+                } else {
+                    alert('Failed to track quest.');
+                }
+            });
+        }
+        
+        function navigateToQuest(location) {
+            alert(`Navigation: Head to ${location} to continue this quest. Use the minimap to find your way!`);
+        }
+        
+        function switchLogTab(tab) {
+            // Hide all tab contents
+            document.getElementById('activeQuests').style.display = 'none';
+            document.getElementById('completedQuests').style.display = 'none';
+            document.getElementById('failedQuests').style.display = 'none';
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tab + 'Quests').style.display = 'block';
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+        
+        // Auto-search when typing
+        document.getElementById('questSearch').addEventListener('input', function() {
+            if (this.value.length >= 3 || this.value.length === 0) {
+                setTimeout(searchQuests, 500);
+            }
+        });
+        </script>
+    </body>
+    </html>
+    

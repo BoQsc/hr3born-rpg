@@ -40,10 +40,10 @@ async def supplies_main(request: web_request.Request):
         <title>Supplies Shop - Outwar</title>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            body {{ font-family: Arial, sans-serif; color: #ffffff; }}
             
             /* Shop Background */
-            .shop-bg {{ 
+            body.shop-bg {{ 
                 background: linear-gradient(135deg, #2d1a0a 0%, #4a2d1a 50%, #2d1a0a 100%);
                 min-height: 100vh;
                 background-image: 
