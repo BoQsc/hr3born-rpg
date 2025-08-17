@@ -229,3 +229,5 @@ JOIN character_classes cc ON c.class_id = cc.id
 WHERE c.wilderness_level > 0
 ORDER BY c.wilderness_level DESC, c.level DESC
 LIMIT :limit;
+-- name: count_total_characters^
+SELECT COUNT(*) as total FROM characters;

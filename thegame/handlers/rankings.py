@@ -107,6 +107,11 @@ async def rankings_main(request: web_request.Request):
             .character-class {{ color: #ccc; font-size: 11px; }}
             .character-faction {{ color: #ff8c00; font-size: 10px; }}
             
+            /* Table Links */
+            .rankings-table .name a {{ color: #88ccff; text-decoration: none; font-weight: bold; }}
+            .rankings-table .name a:hover {{ color: #aaddff; text-decoration: underline; }}
+            .rankings-table tr.current-player .name a {{ color: #ffd700; }}
+            
             /* Stats */
             .stat-value {{ font-weight: bold; }}
             .stat-large {{ font-size: 16px; }}
@@ -231,6 +236,17 @@ def build_rankings_html(rankings, current_char_id):
         # Handle sqlite3.Row objects properly
         total_power = rank['total_power'] if 'total_power' in rank.keys() else 0
         
+        # Simulate realistic online status
+        import random
+        online_status_options = ["Online", "1 min ago", "5 min ago", "15 min ago", "1 hour ago", "2 hours ago", "1 day ago", "3 days ago", "1 week ago"]
+        # Current player and top players more likely to be online
+        if is_current:
+            status = "Online"
+        elif rank_num <= 3:
+            status = random.choice(online_status_options[:4])  # More likely recent
+        else:
+            status = random.choice(online_status_options)
+        
         html += f"""
         <tr class="{row_class}">
             <td class="rank">#{rank_num}</td>
@@ -240,7 +256,7 @@ def build_rankings_html(rankings, current_char_id):
             <td class="class">{rank['class_name']}</td>
             <td class="power">{total_power:,}</td>
             <td class="level">{rank['level']}</td>
-            <td class="last-active">Online</td>
+            <td class="last-active">{status}</td>
         </tr>
         """
     

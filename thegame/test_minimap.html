@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimap Test</title>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: Arial; padding: 20px; }
+        .test-section { margin: 30px 0; padding: 20px; border: 1px solid #444; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Minimap Test</h1>
+    
+    <div class="test-section">
+        <h2>Room 4 (Fight Arena) - Only West Connection</h2>
+        <div id="minimap-room4"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Room 1 (Diamond City Center) - East, North, Southwest Connections</h2>
+        <div id="minimap-room1"></div>
+    </div>
+    
+    <script>
+        function move(direction) {
+            alert('Move ' + direction + ' - this would normally trigger server movement');
+        }
+        
+        // Generate Room 4 minimap (only west connection)
+        document.getElementById('minimap-room4').innerHTML = `
+    <div style="display: grid; grid-template-columns: repeat(3, 40px); grid-gap: 3px; justify-content: center; margin: 10px 0; background: #2a2a2a; padding: 12px; border-radius: 8px; border: 2px solid #666;">
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell room accessible" title="Go West" onclick="move('west')">🚪</div>
+        <div class="minimap-cell current" title="Current Location: Room 4">📍</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+    </div>
+    
+    <div style="text-align: center; font-size: 10px; color: #888; margin-top: 8px;">
+        Click door icons to move
+    </div>
+        `;
+        
+        // Generate Room 1 minimap (east, north, southwest connections)
+        document.getElementById('minimap-room1').innerHTML = `
+    <div style="display: grid; grid-template-columns: repeat(3, 40px); grid-gap: 3px; justify-content: center; margin: 10px 0; background: #2a2a2a; padding: 12px; border-radius: 8px; border: 2px solid #666;">
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell room accessible" title="Go North" onclick="move('north')">🚪</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell current" title="Current Location: Room 1">📍</div>
+        <div class="minimap-cell room accessible" title="Go East" onclick="move('east')">🚪</div>
+        <div class="minimap-cell room accessible" title="Go Southwest" onclick="move('southwest')">🚪</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+        <div class="minimap-cell empty" title="Empty">▫️</div>
+    </div>
+    
+    <div style="text-align: center; font-size: 10px; color: #888; margin-top: 8px;">
+        Click door icons to move
+    </div>
+        `;
+    </script>
+    
+    <style>
+    .minimap-cell {
+        width: 40px;
+        height: 40px;
+        border: 2px solid #444;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        border-radius: 6px;
+        transition: all 0.3s;
+        background: #1a1a1a;
+    }
+    
+    /* Current location */
+    .minimap-cell.current {
+        background: linear-gradient(45deg, #ffd700, #ffeb3b);
+        border-color: #ff8c00;
+        color: #000;
+        font-size: 18px;
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
+        animation: pulse 2s infinite;
+    }
+    
+    /* Connected rooms */
+    .minimap-cell.room {
+        background: linear-gradient(45deg, #32cd32, #90ee90);
+        border-color: #00aa00;
+        color: #fff;
+    }
+    
+    /* Empty spaces */
+    .minimap-cell.empty {
+        background: #0f0f0f;
+        border-color: #222;
+        color: #333;
+    }
+    
+    /* Accessible locations */
+    .minimap-cell.accessible {
+        cursor: pointer;
+        border-color: #32cd32;
+        box-shadow: 0 0 8px rgba(50, 205, 50, 0.6);
+    }
+    
+    .minimap-cell.accessible:hover {
+        transform: scale(1.1);
+        border-color: #90ee90;
+        box-shadow: 0 0 15px rgba(50, 205, 50, 0.9);
+        background: linear-gradient(45deg, #44dd44, #aaffaa);
+    }
+    
+    /* Pulse animation for current location */
+    @keyframes pulse {
+        0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+        }
+        50% { 
+            opacity: 0.8; 
+            transform: scale(1.05);
+        }
+    }
+    </style>
+</body>
+</html>

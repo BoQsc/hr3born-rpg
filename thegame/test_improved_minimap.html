@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Improved 10x10 Minimap Test</title>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: Arial; padding: 20px; }
+        .test-section { margin: 30px 0; padding: 20px; border: 1px solid #444; border-radius: 8px; }
+        .comparison { display: flex; gap: 40px; justify-content: center; align-items: flex-start; }
+        .minimap-container { text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>Improved 10x10 Diamond City Minimap</h1>
+    
+    <div class="test-section">
+        <h2>Enhanced Features</h2>
+        <ul>
+            <li>✅ 10x10 grid with logical street layout</li>
+            <li>✅ Streets on intersections (odd positions) for realistic navigation</li>
+            <li>✅ Multiple building types: offices 🏢, shops 🏪, parks 🌳</li>
+            <li>✅ Special destinations: Arena 🏟️, Casino 🎰, City Hall 🏛️</li>
+            <li>✅ Longer walking paths (1-3 steps) to destinations</li>
+            <li>✅ Accessible paths ➡️ clearly marked and clickable</li>
+            <li>✅ Current location 👤 with pulsing animation</li>
+            <li>✅ Hover effects and visual feedback</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <div class="comparison">
+            <div class="minimap-container">
+                <h3>Room 4 (Fight Arena) - West to Diamond City Center</h3>
+                <div id="minimap-room4"></div>
+                <p><em>Shows path west through streets to Diamond City Center</em></p>
+            </div>
+            
+            <div class="minimap-container">
+                <h3>Room 1 (Center) - Multiple Directions</h3>
+                <div id="minimap-room1"></div>
+                <p><em>Shows paths to Arena (east), City Hall (north), Casino (southwest)</em></p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function move(direction) {
+            alert('Move ' + direction + ' - this would navigate through the city streets to your destination!');
+        }
+        
+        // Room 4 minimap - only west connection
+        document.getElementById('minimap-room4').innerHTML = generateMinimap(4, ['west']);
+        
+        // Room 1 minimap - east, north, southwest connections  
+        document.getElementById('minimap-room1').innerHTML = generateMinimap(1, ['east', 'north', 'southwest']);
+        
+        function generateMinimap(roomId, availableDirections) {
+            const gridSize = 10;
+            const center = 4;
+            
+            // Create street layout
+            let grid = [];
+            for (let row = 0; row < gridSize; row++) {
+                let gridRow = [];
+                for (let col = 0; col < gridSize; col++) {
+                    if (row === center && col === center) {
+                        gridRow.push('current');
+                    } else if (row % 2 === 1 || col % 2 === 1) {
+                        gridRow.push('street');
+                    } else {
+                        // Random buildings
+                        const types = ['building', 'building', 'building', 'park', 'shop'];
+                        gridRow.push(types[Math.floor(Math.random() * types.length)]);
+                    }
+                }
+                grid.push(gridRow);
+            }
+            
+            // Add accessible paths and destinations
+            availableDirections.forEach(direction => {
+                if (direction === 'west') {
+                    grid[center][center-1] = 'accessible';
+                    if (center-3 >= 0) grid[center][center-3] = 'building'; // Diamond City Center
+                } else if (direction === 'east') {
+                    grid[center][center+1] = 'accessible';
+                    if (center+3 < gridSize) grid[center][center+3] = 'arena';
+                } else if (direction === 'north') {
+                    grid[center-1][center] = 'accessible';
+                    if (center-3 >= 0) grid[center-3][center] = 'cityhall';
+                } else if (direction === 'southwest') {
+                    grid[center+1][center-1] = 'accessible';
+                    if (center+3 < gridSize && center-3 >= 0) grid[center+3][center-3] = 'casino';
+                }
+            });
+            
+            const symbols = {
+                'current': '👤',
+                'accessible': '➡️',
+                'building': '🏢',
+                'street': '🛣️',
+                'park': '🌳',
+                'shop': '🏪',
+                'arena': '🏟️',
+                'casino': '🎰',
+                'cityhall': '🏛️'
+            };
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(10, 25px); grid-gap: 1px; justify-content: center; margin: 10px 0; background: #2a2a2a; padding: 8px; border-radius: 8px; border: 2px solid #666;">';
+            
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const cellType = grid[row][col];
+                    const symbol = symbols[cellType] || '❓';
+                    const isClickable = cellType === 'accessible' || 
+                                       (cellType === 'arena' && availableDirections.includes('east')) ||
+                                       (cellType === 'casino' && availableDirections.includes('southwest')) ||
+                                       (cellType === 'cityhall' && availableDirections.includes('north'));
+                    
+                    let title = cellType.charAt(0).toUpperCase() + cellType.slice(1);
+                    if (cellType === 'current') title = `Current Location: Room ${roomId}`;
+                    if (isClickable && cellType === 'accessible') {
+                        if (row < center && col === center) title = 'Go North';
+                        else if (row > center && col === center) title = 'Go South';
+                        else if (row === center && col > center) title = 'Go East';
+                        else if (row === center && col < center) title = 'Go West';
+                        else if (row > center && col < center) title = 'Go Southwest';
+                    }
+                    
+                    html += `<div class="minimap-cell ${cellType} ${isClickable ? 'clickable' : ''}" title="${title}" ${isClickable ? 'onclick="move(\\'navigate\\')"' : ''}>${symbol}</div>`;
+                }
+            }
+            
+            html += '</div><div style="text-align: center; font-size: 10px; color: #888; margin-top: 8px;">Navigate Diamond City • Click arrows and buildings to move</div>';
+            return html;
+        }
+    </script>
+    
+    <style>
+    .minimap-cell {
+        width: 25px;
+        height: 25px;
+        border: 1px solid #444;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        border-radius: 2px;
+        transition: all 0.2s;
+    }
+    
+    .minimap-cell.current {
+        background: linear-gradient(45deg, #ffd700, #ffeb3b);
+        border-color: #ff8c00;
+        color: #000;
+        font-size: 12px;
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+        animation: pulse 2s infinite;
+        z-index: 10;
+        position: relative;
+    }
+    
+    .minimap-cell.accessible {
+        background: linear-gradient(45deg, #32cd32, #90ee90);
+        border-color: #00aa00;
+        color: #fff;
+    }
+    
+    .minimap-cell.building {
+        background: #4a4a4a;
+        border-color: #555;
+        color: #888;
+    }
+    
+    .minimap-cell.street {
+        background: #666;
+        border-color: #777;
+        color: #aaa;
+    }
+    
+    .minimap-cell.park {
+        background: #2d5a2d;
+        border-color: #3d6a3d;
+        color: #5d8a5d;
+    }
+    
+    .minimap-cell.shop {
+        background: #5a4a2d;
+        border-color: #6a5a3d;
+        color: #8a7a5d;
+    }
+    
+    .minimap-cell.arena {
+        background: #5a2d2d;
+        border-color: #6a3d3d;
+        color: #8a5d5d;
+    }
+    
+    .minimap-cell.casino {
+        background: #5a2d5a;
+        border-color: #6a3d6a;
+        color: #8a5d8a;
+    }
+    
+    .minimap-cell.cityhall {
+        background: #2d2d5a;
+        border-color: #3d3d6a;
+        color: #5d5d8a;
+    }
+    
+    .minimap-cell.clickable {
+        cursor: pointer;
+        box-shadow: 0 0 6px rgba(50, 205, 50, 0.6);
+    }
+    
+    .minimap-cell.clickable:hover {
+        transform: scale(1.15);
+        box-shadow: 0 0 10px rgba(50, 205, 50, 0.9);
+        z-index: 5;
+        position: relative;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    </style>
+</body>
+</html>

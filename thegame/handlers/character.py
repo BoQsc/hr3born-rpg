@@ -252,6 +252,10 @@ async def character_detail(request: web_request.Request):
     except (ValueError, KeyError):
         raise web.HTTPBadRequest(text="Invalid character ID")
     
+    # Check if this is the current user's character
+    current_character = await get_current_character(request)
+    is_own_character = current_character and current_character.id == character_id
+    
     try:
         database = await get_db()
         async with database.get_connection_context() as conn:
@@ -452,14 +456,14 @@ async def character_detail(request: web_request.Request):
                             </div>
                         </div>
                         <div class="action-buttons">
-                            <button class="action-btn attack">⚔️ ATTACK</button>
-                            <button class="action-btn trade">💎 TRADE</button>
-                            <button class="action-btn">✉️ MESSAGE</button>
-                            <button class="action-btn">👥 CREW INV</button>
-                            <button class="action-btn">➕ ADD ALLY</button>
-                            <button class="action-btn">⚔️ ADD ENEMY</button>
-                            <button class="action-btn">❌ BLOCK</button>
-                            <button class="action-btn">💰 TREASURY</button>
+                            {f'<button class="action-btn" onclick="window.location.href=\\"/inventory\\"">🎒 INVENTORY</button>' if is_own_character else f'<button class="action-btn attack" onclick="window.location.href=\\"/attack/{character.id}\\"">⚔️ ATTACK</button>'}
+                            {f'<button class="action-btn" onclick="window.location.href=\\"/character/{character.id}\\"">📝 EDIT PROFILE</button>' if is_own_character else '<button class="action-btn trade">💎 TRADE</button>'}
+                            {f'<button class="action-btn" onclick="window.location.href=\\"/crew\\"">👥 MY CREW</button>' if is_own_character else '<button class="action-btn">✉️ MESSAGE</button>'}
+                            {f'<button class="action-btn" onclick="window.location.href=\\"/rankings\\"">🏆 RANKINGS</button>' if is_own_character else '<button class="action-btn">👥 CREW INV</button>'}
+                            {f'<button class="action-btn" onclick="window.location.href=\\"/marketplace\\"">🛒 MARKETPLACE</button>' if is_own_character else '<button class="action-btn">➕ ADD ALLY</button>'}
+                            {f'<button class="action-btn" onclick="window.location.href=\\"/quests\\"">📜 QUESTS</button>' if is_own_character else '<button class="action-btn">⚔️ ADD ENEMY</button>'}
+                            {f'<button class="action-btn" onclick="window.location.href=\\"/casino\\"">🎰 CASINO</button>' if is_own_character else '<button class="action-btn">❌ BLOCK</button>'}
+                            {f'<button class="action-btn" onclick="window.location.href=\\"/treasury\\"">💰 TREASURY</button>' if is_own_character else '<button class="action-btn">💰 TREASURY</button>'}
                         </div>
                     </div>
                 </div>

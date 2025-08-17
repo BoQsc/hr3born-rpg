@@ -20,6 +20,14 @@ async def game_main(request: web_request.Request):
         room_info = await database.queries.get_room_info(conn, room_id=character.current_room_id)
         connections = await database.queries.get_room_connections(conn, room_id=character.current_room_id)
         characters_in_room = await database.queries.get_characters_in_room(conn, room_id=character.current_room_id)
+        
+        # Get real server statistics
+        result = await database.queries.count_total_characters(conn)
+        total_characters = result['total'] if result else 0
+        # Simulate more realistic numbers based on actual data
+        players_online = min(total_characters, max(3, int(total_characters * 0.3)))  # 30% online
+        active_battles = max(0, int(players_online * 0.1))  # 10% of online players in battles
+        market_trades = max(0, int(players_online * 0.2))  # 20% active in marketplace
     
     # Build ASCII-style mini map
     minimap_html = generate_minimap(character.current_room_id, connections)
@@ -131,8 +139,15 @@ async def game_main(request: web_request.Request):
             .section-title {{ background: #444; padding: 10px 15px; border-radius: 8px 8px 0 0; font-weight: bold; text-align: center; }}
             .room-content {{ padding: 20px; }}
             
-            /* Minimap */
-            .minimap {{ width: 200px; height: 150px; background: #1a1a1a; border: 2px solid #666; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1; padding: 5px; margin: 10px auto; white-space: pre; }}
+            /* Minimap Container */
+            .minimap {{ 
+                max-width: 100%; 
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                margin: 10px auto; 
+                background: transparent;
+            }}
             
             /* Movement Controls */
             .movement-controls {{ display: flex; flex-direction: column; align-items: center; gap: 5px; margin: 15px 0; }}
@@ -275,12 +290,12 @@ async def game_main(request: web_request.Request):
                     <div class="section-title">- Recent Activity -</div>
                     <div class="room-content">
                         <div style="font-size: 11px; line-height: 1.3;">
-                            <div style="margin: 5px 0; color: #ccc;">🔥 <span style="color: #ffd700;">WorkingHero</span> defeated <span style="color: #ff8888;">Bandit Leader</span> (+2,500 exp)</div>
-                            <div style="margin: 5px 0; color: #ccc;">💰 <span style="color: #32cd32;">SuccessHero</span> sold <span style="color: #ff8c00;">Mythic Sword</span> for 50,000g</div>
-                            <div style="margin: 5px 0; color: #ccc;">⚔️ <span style="color: #ff6666;">TestChar</span> attacked <span style="color: #87ceeb;">EquippedHero</span></div>
-                            <div style="margin: 5px 0; color: #ccc;">🏆 <span style="color: #ffd700;">NewTestChar</span> reached level 15</div>
-                            <div style="margin: 5px 0; color: #ccc;">🎲 <span style="color: #ff8c00;">FinalTest</span> won 25,000g at the casino</div>
-                            <div style="margin: 5px 0; color: #ccc;">🌟 <span style="color: #87ceeb;">boberhunter</span> completed quest "Dragon's Lair"</div>
+                            <div style="margin: 5px 0; color: #ccc;">🔥 <a href="/character/3" style="color: #ffd700; text-decoration: none; font-weight: bold;">WorkingHero</a> defeated <span style="color: #ff8888;">Bandit Leader</span> (+2,500 exp)</div>
+                            <div style="margin: 5px 0; color: #ccc;">💰 <a href="/character/4" style="color: #32cd32; text-decoration: none; font-weight: bold;">SuccessHero</a> sold <span style="color: #ff8c00;">Mythic Sword</span> for 50,000g</div>
+                            <div style="margin: 5px 0; color: #ccc;">⚔️ <a href="/character/1" style="color: #ff6666; text-decoration: none; font-weight: bold;">TestChar</a> attacked <a href="/character/5" style="color: #87ceeb; text-decoration: none; font-weight: bold;">EquippedHero</a></div>
+                            <div style="margin: 5px 0; color: #ccc;">🏆 <a href="/character/6" style="color: #ffd700; text-decoration: none; font-weight: bold;">NewTestChar</a> reached level 15</div>
+                            <div style="margin: 5px 0; color: #ccc;">🎲 <a href="/character/2" style="color: #ff8c00; text-decoration: none; font-weight: bold;">FinalTest</a> won 25,000g at the casino</div>
+                            <div style="margin: 5px 0; color: #ccc;">🌟 <a href="/character/7" style="color: #87ceeb; text-decoration: none; font-weight: bold;">boberhunter</a> completed quest "Dragon's Lair"</div>
                         </div>
                     </div>
                 </div>
@@ -291,15 +306,15 @@ async def game_main(request: web_request.Request):
                     <div class="room-content" style="font-size: 11px;">
                         <div style="display: flex; justify-content: space-between; margin: 5px 0;">
                             <span>Players Online:</span>
-                            <span style="color: #32cd32; font-weight: bold;">{random.randint(45, 78)}</span>
+                            <span style="color: #32cd32; font-weight: bold;">{players_online}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin: 5px 0;">
                             <span>Active Battles:</span>
-                            <span style="color: #ff6666; font-weight: bold;">{random.randint(3, 12)}</span>
+                            <span style="color: #ff6666; font-weight: bold;">{active_battles}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin: 5px 0;">
                             <span>Market Trades:</span>
-                            <span style="color: #ffd700; font-weight: bold;">{random.randint(15, 45)}</span>
+                            <span style="color: #ffd700; font-weight: bold;">{market_trades}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin: 5px 0;">
                             <span>Server Uptime:</span>
@@ -548,6 +563,43 @@ async def game_main(request: web_request.Request):
                 }}
             }}
         }});
+        
+        // Keyboard hotkeys
+        document.addEventListener('keydown', function(event) {{
+            // Only trigger if not in an input field
+            if (event.target.tagName.toLowerCase() !== 'input' && event.target.tagName.toLowerCase() !== 'textarea') {{
+                switch(event.key.toLowerCase()) {{
+                    case 'e':
+                        event.preventDefault();
+                        openFloatingWindow('equipment');
+                        break;
+                    case 'b':
+                        event.preventDefault();
+                        window.location.href = '/inventory';
+                        break;
+                    case 'q':
+                        event.preventDefault();
+                        window.location.href = '/quests';
+                        break;
+                    case 'w':
+                        event.preventDefault();
+                        move('north');
+                        break;
+                    case 'a':
+                        event.preventDefault();
+                        move('west');
+                        break;
+                    case 's':
+                        event.preventDefault();
+                        move('south');
+                        break;
+                    case 'd':
+                        event.preventDefault();
+                        move('east');
+                        break;
+                }}
+            }}
+        }});
         </script>
     </body>
     </html>
@@ -555,69 +607,211 @@ async def game_main(request: web_request.Request):
     return web.Response(text=html, content_type='text/html')
 
 def generate_minimap(current_room_id, connections):
-    """Generate visual minimap with CSS"""
-    # Create a visual grid-based minimap
+    """Generate street-based city minimap with walkable paths"""
     available_directions = [conn['direction'].lower() for conn in connections]
     
-    # Build minimap grid HTML
-    minimap_html = f'''
-    <div style="display: grid; grid-template-columns: repeat(5, 25px); grid-gap: 2px; justify-content: center; margin: 10px 0;">
-        <!-- Row 1 -->
-        <div class="minimap-cell unknown"></div>
-        <div class="minimap-cell {'available' if 'north' in available_directions else 'unknown'}" title="North">{'🚪' if 'north' in available_directions else '⬛'}</div>
-        <div class="minimap-cell unknown"></div>
-        <div class="minimap-cell {'available' if 'northeast' in available_directions else 'unknown'}" title="Northeast">{'🚪' if 'northeast' in available_directions else '⬛'}</div>
-        <div class="minimap-cell unknown"></div>
-        
-        <!-- Row 2 -->
-        <div class="minimap-cell {'available' if 'northwest' in available_directions else 'unknown'}" title="Northwest">{'🚪' if 'northwest' in available_directions else '⬛'}</div>
-        <div class="minimap-cell {'available' if 'west' in available_directions else 'unknown'}" title="West">{'🚪' if 'west' in available_directions else '⬛'}</div>
-        <div class="minimap-cell current" title="Current Location">👤</div>
-        <div class="minimap-cell {'available' if 'east' in available_directions else 'unknown'}" title="East">{'🚪' if 'east' in available_directions else '⬛'}</div>
-        <div class="minimap-cell {'available' if 'southeast' in available_directions else 'unknown'}" title="Southeast">{'🚪' if 'southeast' in available_directions else '⬛'}</div>
-        
-        <!-- Row 3 -->
-        <div class="minimap-cell unknown"></div>
-        <div class="minimap-cell {'available' if 'south' in available_directions else 'unknown'}" title="South">{'🚪' if 'south' in available_directions else '⬛'}</div>
-        <div class="minimap-cell unknown"></div>
-        <div class="minimap-cell {'available' if 'southwest' in available_directions else 'unknown'}" title="Southwest">{'🚪' if 'southwest' in available_directions else '⬛'}</div>
-        <div class="minimap-cell unknown"></div>
-    </div>
+    # 10x10 grid for proper city layout
+    grid_size = 10
+    center = 4  # Current location at center
     
-    <style>
-    .minimap-cell {{
-        width: 25px;
-        height: 25px;
-        border: 1px solid #666;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        border-radius: 3px;
-    }}
-    .minimap-cell.current {{
-        background: linear-gradient(45deg, #ffd700, #ffeb3b);
-        border-color: #ff8c00;
-        color: #000;
-        font-size: 12px;
-        box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
-    }}
-    .minimap-cell.available {{
-        background: linear-gradient(45deg, #32cd32, #90ee90);
-        border-color: #00aa00;
-        cursor: pointer;
-    }}
-    .minimap-cell.available:hover {{
-        background: linear-gradient(45deg, #90ee90, #98fb98);
-        transform: scale(1.1);
-    }}
-    .minimap-cell.unknown {{
-        background: #333;
-        border-color: #555;
-        color: #666;
-    }}
-    </style>
-    '''
+    # Initialize grid - all streets by default for walkable city
+    grid = [['street' for _ in range(grid_size)] for _ in range(grid_size)]
+    
+    # Add buildings and landmarks at intersections (even positions)
+    landmarks = {
+        (0, 0): 'building', (0, 2): 'park', (0, 4): 'building', (0, 6): 'shop', (0, 8): 'building',
+        (2, 0): 'shop', (2, 2): 'building', (2, 6): 'building', (2, 8): 'park',
+        (4, 0): 'building', (4, 2): 'park', (4, 6): 'shop', (4, 8): 'building',
+        (6, 0): 'park', (6, 2): 'building', (6, 6): 'building', (6, 8): 'shop',
+        (8, 0): 'building', (8, 2): 'shop', (8, 4): 'building', (8, 6): 'park', (8, 8): 'building'
+    }
+    
+    # Place buildings and landmarks
+    for (row, col), landmark_type in landmarks.items():
+        if 0 <= row < grid_size and 0 <= col < grid_size:
+            grid[row][col] = landmark_type
+    
+    # Place special destinations based on available directions
+    destinations = {
+        'north': (0, center, 'cityhall'),      # City Hall to the north
+        'south': (8, center, 'arena'),         # Arena to the south  
+        'east': (center, 8, 'casino'),         # Casino to the east
+        'west': (center, 0, 'marketplace'),    # Marketplace to the west
+        'northeast': (0, 8, 'temple'),         # Temple northeast
+        'northwest': (0, 0, 'barracks'),       # Barracks northwest
+        'southeast': (8, 8, 'tavern'),         # Tavern southeast
+        'southwest': (8, 0, 'bank')            # Bank southwest
+    }
+    
+    # Add destination buildings for available directions
+    for direction in available_directions:
+        if direction in destinations:
+            dest_row, dest_col, dest_type = destinations[direction]
+            if 0 <= dest_row < grid_size and 0 <= dest_col < grid_size:
+                grid[dest_row][dest_col] = dest_type
+    
+    # Mark current location
+    grid[center][center] = 'current'
+    
+    # Create walkable paths to accessible destinations
+    for direction in available_directions:
+        if direction in destinations:
+            dest_row, dest_col, _ = destinations[direction]
+            
+            # Create path from center to destination
+            current_row, current_col = center, center
+            
+            # Step towards destination
+            while current_row != dest_row or current_col != dest_col:
+                if current_row < dest_row:
+                    current_row += 1
+                elif current_row > dest_row:
+                    current_row -= 1
+                    
+                if current_col < dest_col:
+                    current_col += 1
+                elif current_col > dest_col:
+                    current_col -= 1
+                
+                # Mark path as walkable street (don't overwrite buildings)
+                if 0 <= current_row < grid_size and 0 <= current_col < grid_size:
+                    if grid[current_row][current_col] not in ['current'] + list(landmarks.values()) + [dest[2] for dest in destinations.values()]:
+                        grid[current_row][current_col] = 'path'
+    
+    # Mark immediate adjacent streets as highlighted paths
+    for direction in available_directions:
+        if direction == 'north' and center-1 >= 0:
+            grid[center-1][center] = 'path'
+        elif direction == 'south' and center+1 < grid_size:
+            grid[center+1][center] = 'path'
+        elif direction == 'east' and center+1 < grid_size:
+            grid[center][center+1] = 'path'
+        elif direction == 'west' and center-1 >= 0:
+            grid[center][center-1] = 'path'
+        elif direction == 'northeast' and center-1 >= 0 and center+1 < grid_size:
+            grid[center-1][center+1] = 'path'
+        elif direction == 'northwest' and center-1 >= 0 and center-1 >= 0:
+            grid[center-1][center-1] = 'path'
+        elif direction == 'southeast' and center+1 < grid_size and center+1 < grid_size:
+            grid[center+1][center+1] = 'path'
+        elif direction == 'southwest' and center+1 < grid_size and center-1 >= 0:
+            grid[center+1][center-1] = 'path'
+    
+    # Build minimap with proper container sizing
+    minimap_html = f'''
+    <div style="
+        display: grid; 
+        grid-template-columns: repeat({grid_size}, 1fr); 
+        grid-template-rows: repeat({grid_size}, 1fr);
+        width: 300px; 
+        height: 300px; 
+        gap: 1px; 
+        background: #2a2a2a; 
+        padding: 10px; 
+        border-radius: 8px; 
+        border: 2px solid #666;
+        margin: 0 auto;
+    ">'''
+    
+    symbols = {
+        'current': '👤',
+        'street': '⬜',
+        'path': '🟨',
+        'building': '🏢',
+        'park': '🌳',
+        'shop': '🏪',
+        'cityhall': '🏛️',
+        'arena': '🏟️',
+        'casino': '🎰',
+        'marketplace': '🛒',
+        'temple': '⛪',
+        'barracks': '🏰',
+        'tavern': '🍺',
+        'bank': '🏦'
+    }
+    
+    for row in range(grid_size):
+        for col in range(grid_size):
+            cell_type = grid[row][col]
+            symbol = symbols.get(cell_type, '❓')
+            
+            # Determine if cell is clickable
+            is_clickable = False
+            direction = None
+            
+            # Check if this is a destination reachable in one of the available directions
+            for dir_name in available_directions:
+                if dir_name in destinations:
+                    dest_row, dest_col, dest_type = destinations[dir_name]
+                    if row == dest_row and col == dest_col:
+                        is_clickable = True
+                        direction = dir_name
+                        break
+            
+            # Only make tiles clickable that correspond to actual available room connections
+            if not is_clickable and cell_type in ['path', 'street']:
+                # Calculate relative position to determine direction
+                row_diff = row - center
+                col_diff = col - center
+                
+                # Only make immediately adjacent tiles clickable (1 step away)
+                if abs(row_diff) <= 1 and abs(col_diff) <= 1 and (row_diff != 0 or col_diff != 0):
+                    # Determine direction based on position
+                    if row_diff == -1 and col_diff == 0:
+                        direction = 'north'
+                    elif row_diff == 1 and col_diff == 0:
+                        direction = 'south'
+                    elif row_diff == 0 and col_diff == 1:
+                        direction = 'east'
+                    elif row_diff == 0 and col_diff == -1:
+                        direction = 'west'
+                    elif row_diff == -1 and col_diff == 1:
+                        direction = 'northeast'
+                    elif row_diff == -1 and col_diff == -1:
+                        direction = 'northwest'
+                    elif row_diff == 1 and col_diff == 1:
+                        direction = 'southeast'
+                    elif row_diff == 1 and col_diff == -1:
+                        direction = 'southwest'
+                    
+                    # Only make it clickable if this direction is actually available in the database
+                    if direction and direction in available_directions:
+                        is_clickable = True
+            
+            # Style based on cell type
+            if cell_type == 'current':
+                style = 'background: linear-gradient(45deg, #ffd700, #ffeb3b); color: #000; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid #ff8c00; box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);'
+            elif cell_type == 'path':
+                style = 'background: linear-gradient(45deg, #90ee90, #32cd32); color: #000; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid #00aa00;'
+                if is_clickable:
+                    style += ' cursor: pointer; box-shadow: 0 0 6px rgba(50, 205, 50, 0.7);'
+            elif cell_type == 'street':
+                style = 'background: #666; color: #999; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; border: 1px solid #777;'
+                if is_clickable:
+                    style += ' cursor: pointer; box-shadow: 0 0 4px rgba(150, 150, 150, 0.6); border-color: #999;'
+            elif cell_type in ['cityhall', 'arena', 'casino', 'marketplace', 'temple', 'barracks', 'tavern', 'bank']:
+                # Special destinations - make them stand out and clickable if accessible
+                style = 'background: linear-gradient(45deg, #4169e1, #1e90ff); color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #0066cc;'
+                if is_clickable:
+                    style += ' cursor: pointer; box-shadow: 0 0 10px rgba(65, 105, 225, 0.8);'
+            else:
+                # Regular buildings, parks, shops
+                style = 'background: #4a4a4a; color: #888; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid #555;'
+            
+            onclick = f'onclick="move(\'{direction}\')"' if is_clickable else ''
+            title = f'title="{cell_type.replace("_", " ").title()}"'
+            if is_clickable:
+                if cell_type == 'street':
+                    title = f'title="Walk {direction} down the street"'
+                elif cell_type == 'path':
+                    title = f'title="Follow path {direction}"'
+                else:
+                    title = f'title="Go {direction} to {cell_type.replace("_", " ").title()}"'
+            
+            minimap_html += f'<div style="{style}" {onclick} {title}>{symbol}</div>'
+    
+    minimap_html += '</div>'
+    minimap_html += '<div style="text-align: center; font-size: 11px; color: #aaa; margin-top: 8px;">🌟 Diamond City Streets - Click any adjacent street, path, or building to walk around</div>'
     
     return minimap_html
 
@@ -647,8 +841,38 @@ def generate_movement_controls(connections):
     controls += """
     <script>
     function move(direction) {
-        fetch('/move/' + direction, {method: 'POST'})
-        .then(() => location.reload());
+        console.log('Attempting to move:', direction);
+        
+        fetch('/move/' + direction, {
+            method: 'POST',
+            credentials: 'same-origin'  // Include session cookies
+        })
+        .then(response => {
+            console.log('Movement response:', response.status, response.type);
+            
+            // Server always redirects on successful movement
+            if (response.redirected || response.status === 302 || response.type === 'opaqueredirect') {
+                console.log('Movement successful, reloading page');
+                // Follow the redirect by reloading
+                window.location.reload();
+            } else if (response.status === 400) {
+                console.error('Invalid direction');
+                alert('Cannot move in that direction');
+            } else if (response.status === 401 || response.status === 403) {
+                console.error('Authentication error');
+                window.location.href = '/login';
+            } else {
+                console.error('Unexpected response:', response.status);
+                response.text().then(text => {
+                    console.error('Response text:', text);
+                    alert('Movement failed: ' + text);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Movement network error:', error);
+            alert('Network error during movement: ' + error.message);
+        });
     }
     </script>
     """
@@ -742,32 +966,45 @@ async def room_detail(request: web_request.Request):
 
 async def move_character(request: web_request.Request):
     """Move character in specified direction"""
-    await require_login(request)
-    character = await get_current_character(request)
-    
-    if not character:
-        raise web.HTTPFound('/characters')
-    
-    direction = request.match_info['direction'].lower()
-    
-    database = await get_db()
-    async with database.get_connection_context() as conn:
-        # Get possible connections from current room
-        connections = await database.queries.get_room_connections(conn, room_id=character.current_room_id)
+    try:
+        await require_login(request)
+        character = await get_current_character(request)
         
-        # Find the connection for this direction
-        target_room = None
-        for connection in connections:
-            if connection['direction'].lower() == direction:
-                target_room = connection['to_room_id']
-                break
+        if not character:
+            print(f"[MOVEMENT] No character found, redirecting to character selection")
+            raise web.HTTPFound('/characters')
         
-        if not target_room:
-            # Invalid direction
-            raise web.HTTPBadRequest(text="Invalid direction")
+        direction = request.match_info['direction'].lower()
+        print(f"[MOVEMENT] Character {character.name} attempting to move {direction} from room {character.current_room_id}")
         
-        # Move character
-        await database.queries.move_character(conn, room_id=target_room, character_id=character.id)
-        await conn.commit()
-    
-    raise web.HTTPFound('/game')
+        database = await get_db()
+        async with database.get_connection_context() as conn:
+            # Get possible connections from current room
+            connections = await database.queries.get_room_connections(conn, room_id=character.current_room_id)
+            available_directions = [conn['direction'].lower() for conn in connections]
+            print(f"[MOVEMENT] Available directions from room {character.current_room_id}: {available_directions}")
+            
+            # Find the connection for this direction
+            target_room = None
+            for connection in connections:
+                if connection['direction'].lower() == direction:
+                    target_room = connection['to_room_id']
+                    break
+            
+            if not target_room:
+                print(f"[MOVEMENT] Invalid direction '{direction}' from room {character.current_room_id}")
+                raise web.HTTPBadRequest(text=f"Cannot move {direction} from this location")
+            
+            print(f"[MOVEMENT] Moving character {character.id} from room {character.current_room_id} to room {target_room}")
+            
+            # Move character
+            await database.queries.move_character(conn, room_id=target_room, character_id=character.id)
+            await conn.commit()
+            
+            print(f"[MOVEMENT] Movement successful! Character now in room {target_room}")
+        
+        raise web.HTTPFound('/game')
+        
+    except Exception as e:
+        print(f"[MOVEMENT ERROR] {type(e).__name__}: {e}")
+        raise
