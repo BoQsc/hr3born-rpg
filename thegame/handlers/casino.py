@@ -208,13 +208,12 @@ async def casino_main(request: web_request.Request):
     <body class="casino-bg">
         <!-- Top Navigation -->
         <div class="top-nav">
-            <div class="nav-tab">Explore World</div>
-            <div class="nav-tab">Dungeons</div>
-            <div class="nav-tab">Challenges</div>
-            <div class="nav-tab">Marketplace</div>
-            <div class="nav-tab">Rankings</div>
+            <div class="nav-tab" onclick="window.location.href='/game'">Explore World</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Dungeons</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Challenges</div>
+            <div class="nav-tab" onclick="window.location.href='/marketplace'">Marketplace</div>
+            <div class="nav-tab" onclick="window.location.href='/rankings'">Rankings</div>
             <div class="nav-tab active">Casino</div>
-            <div class="nav-tab">Discord</div>
         </div>
         
         <!-- Header Status Bar -->
@@ -488,17 +487,17 @@ async def casino_main(request: web_request.Request):
                     else if (reels[0] === '7️⃣') winAmount = bet * 50;
                     else if (reels[0] === '⭐') winAmount = bet * 25;
                     else winAmount = bet * 10;
-                    message = `Three ${reels[0]}! You win ${winAmount.toLocaleString()}g!`;
+                    message = 'Three ' + reels[0] + '! You win ' + winAmount.toLocaleString() + 'g!';
                 }} else if (reels[0] === reels[1] || reels[1] === reels[2] || reels[0] === reels[2]) {{
                     // Two of a kind
                     winAmount = bet * 2;
-                    message = `Two of a kind! You win ${winAmount.toLocaleString()}g!`;
+                    message = 'Two of a kind! You win ' + winAmount.toLocaleString() + 'g!';
                 }} else {{
                     winAmount = -bet;
-                    message = `No match. You lose ${bet.toLocaleString()}g.`;
+                    message = 'No match. You lose ' + bet.toLocaleString() + 'g.';
                 }}
                 
-                showResult('Slot Machine', message, `Reels: ${reels.join(' ')}<br>Bet: ${bet.toLocaleString()}g`, winAmount > 0, winAmount);
+                showResult('Slot Machine', message, 'Reels: ' + reels.join(' ') + '<br>Bet: ' + bet.toLocaleString() + 'g', winAmount > 0, winAmount);
             }}, 2500);
         }}
         
@@ -525,19 +524,19 @@ async def casino_main(request: web_request.Request):
             
             if (betType === 'high' && total >= 8) {{
                 winAmount = bet * 2;
-                message = `High wins! Total: ${total}`;
+                message = 'High wins! Total: ' + total;
             }} else if (betType === 'low' && total <= 6) {{
                 winAmount = bet * 2;
-                message = `Low wins! Total: ${total}`;
+                message = 'Low wins! Total: ' + total;
             }} else if (betType === 'double' && dice1 === dice2) {{
                 winAmount = bet * 6;
-                message = `Double ${dice1}s! You win big!`;
+                message = 'Double ' + dice1 + 's! You win big!';
             }} else {{
                 winAmount = -bet;
-                message = `You lose. Total: ${total}`;
+                message = 'You lose. Total: ' + total;
             }}
             
-            showResult('Dice Roll', message, `Dice: ${dice1} + ${dice2} = ${total}<br>Bet: ${betType} for ${bet.toLocaleString()}g`, winAmount > 0, winAmount);
+            showResult('Dice Roll', message, 'Dice: ' + dice1 + ' + ' + dice2 + ' = ' + total + '<br>Bet: ' + betType + ' for ' + bet.toLocaleString() + 'g', winAmount > 0, winAmount);
         }}
         
         // Roulette
@@ -570,14 +569,14 @@ async def casino_main(request: web_request.Request):
                     (betType === 'odd' && isOdd) ||
                     (betType === 'even' && isEven)) {{
                     winAmount = bet * 2;
-                    message = `${betType.toUpperCase()} wins!`;
+                    message = betType.toUpperCase() + ' wins!';
                 }} else {{
                     winAmount = -bet;
-                    message = `${betType.toUpperCase()} loses.`;
+                    message = betType.toUpperCase() + ' loses.';
                 }}
                 
                 const color = isRed ? 'Red' : isBlack ? 'Black' : 'Green';
-                showResult('Roulette', message, `Number: ${number} (${color})<br>Bet: ${betType} for ${bet.toLocaleString()}g`, winAmount > 0, winAmount);
+                showResult('Roulette', message, 'Number: ' + number + ' (' + color + ')<br>Bet: ' + betType + ' for ' + bet.toLocaleString() + 'g', winAmount > 0, winAmount);
             }}, 2000);
         }}
         
@@ -598,8 +597,8 @@ async def casino_main(request: web_request.Request):
                 const suit = suits[Math.floor(Math.random() * suits.length)];
                 const rank = ranks[Math.floor(Math.random() * ranks.length)];
                 hand.push({{rank, suit}});
-                document.getElementById(`card${i + 1}`).textContent = rank + suit;
-                document.getElementById(`card${i + 1}`).style.color = (suit === '♥' || suit === '♦') ? 'red' : 'black';
+                document.getElementById('card' + (i + 1)).textContent = rank + suit;
+                document.getElementById('card' + (i + 1)).style.color = (suit === '♥' || suit === '♦') ? 'red' : 'black';
             }}
             
             // Simple hand evaluation (just checking for pairs)
@@ -647,7 +646,7 @@ async def casino_main(request: web_request.Request):
             const numbers = [];
             for (let i = 0; i < 5; i++) {{
                 numbers.push(Math.floor(Math.random() * 50) + 1);
-                document.getElementById(`lotto${i + 1}`).textContent = numbers[i];
+                document.getElementById('lotto' + (i + 1)).textContent = numbers[i];
             }}
             
             // Simple lottery win check
@@ -657,10 +656,10 @@ async def casino_main(request: web_request.Request):
             
             if (matches >= 3) {{
                 winAmount = ticketCost * Math.pow(10, matches - 2);
-                message = `${matches} matching numbers!`;
+                message = matches + ' matching numbers!';
             }}
             
-            showResult('Lottery Ticket', message, `Numbers: ${numbers.join(' ')}<br>Ticket Cost: ${ticketCost.toLocaleString()}g`, winAmount > 0, winAmount);
+            showResult('Lottery Ticket', message, 'Numbers: ' + numbers.join(' ') + '<br>Ticket Cost: ' + ticketCost.toLocaleString() + 'g', winAmount > 0, winAmount);
         }}
         
         // High-Low
@@ -695,15 +694,15 @@ async def casino_main(request: web_request.Request):
                 correct = true;
                 winStreak++;
                 winAmount = bet * (1 + winStreak * 0.5);
-                message = `Correct! Win streak: ${winStreak}`;
+                message = 'Correct! Win streak: ' + winStreak;
             }} else {{
                 winStreak = 0;
                 winAmount = -bet;
-                message = `Wrong! Streak reset.`;
+                message = 'Wrong! Streak reset.';
             }}
             
             document.getElementById('streak').textContent = winStreak;
-            showResult('High-Low', message, `Previous: ${currentCard}<br>New: ${newCard}<br>Guess: ${guess}`, correct, winAmount);
+            showResult('High-Low', message, 'Previous: ' + currentCard + '<br>New: ' + newCard + '<br>Guess: ' + guess, correct, winAmount);
         }}
         
         // Close modal when clicking outside

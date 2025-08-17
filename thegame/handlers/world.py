@@ -153,11 +153,11 @@ async def game_main(request: web_request.Request):
         <!-- Top Navigation -->
         <div class="top-nav">
             <div class="nav-tab active">Explore World</div>
-            <div class="nav-tab">Dungeons</div>
-            <div class="nav-tab">Challenges</div>
-            <div class="nav-tab">All docs</div>
-            <div class="nav-tab">News</div>
-            <div class="nav-tab">Discord</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Dungeons</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Challenges</div>
+            <div class="nav-tab" onclick="window.location.href='/marketplace'">Marketplace</div>
+            <div class="nav-tab" onclick="window.location.href='/rankings'">Rankings</div>
+            <div class="nav-tab" onclick="window.location.href='/casino'">Casino</div>
         </div>
         
         <!-- Header Status Bar -->
@@ -183,7 +183,7 @@ async def game_main(request: web_request.Request):
             <!-- Left Sidebar -->
             <div class="left-sidebar">
                 <div class="menu-section">
-                    <div class="menu-item"><span class="menu-icon">📁</span>MY RGA</div>
+                    <div class="menu-item" onclick="window.location.href='/character/{character.id}'"><span class="menu-icon">📁</span>MY RGA</div>
                     <div class="menu-item active"><span class="menu-icon">🏠</span>HOME</div>
                     <div class="menu-item" onclick="window.location.href='/character/{character.id}'"><span class="menu-icon">👤</span>CHARACTER <span style="margin-left: auto;">▶</span></div>
                     <div class="menu-item" onclick="window.location.href='/marketplace'"><span class="menu-icon">🛒</span>MARKETPLACE <span style="margin-left: auto;">▶</span></div>
@@ -195,7 +195,7 @@ async def game_main(request: web_request.Request):
                     <div class="menu-item" onclick="window.location.href='/wilderness'"><span class="menu-icon">🌍</span>WILDERNESS</div>
                     {f'<div class="menu-item" onclick="window.location.href=\'/factions\'"><span class="menu-icon">⚔️</span>FACTIONS</div>' if character.level >= 91 else ''}
                 </div>
-                <div class="get-points-btn">GET POINTS + TOKENS</div>
+                <div class="get-points-btn" onclick="alert('Points & Tokens system coming soon! This will allow you to purchase premium upgrades and special items.')">GET POINTS + TOKENS</div>
             </div>
             
             <!-- Center Content -->

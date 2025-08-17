@@ -193,3 +193,39 @@ GROUP BY c.id;
 
 -- name: update_character_total_power!
 UPDATE characters SET total_power = :total_power WHERE id = :character_id;
+
+-- name: get_power_rankings
+SELECT c.id, c.name, c.level, c.total_power, cc.name as class_name
+FROM characters c
+JOIN character_classes cc ON c.class_id = cc.id
+ORDER BY c.total_power DESC, c.level DESC
+LIMIT :limit;
+
+-- name: get_level_rankings
+SELECT c.id, c.name, c.level, c.experience, cc.name as class_name
+FROM characters c
+JOIN character_classes cc ON c.class_id = cc.id
+ORDER BY c.level DESC, c.experience DESC
+LIMIT :limit;
+
+-- name: get_gold_rankings
+SELECT c.id, c.name, c.level, c.gold, cc.name as class_name
+FROM characters c
+JOIN character_classes cc ON c.class_id = cc.id
+ORDER BY c.gold DESC, c.level DESC
+LIMIT :limit;
+
+-- name: get_experience_rankings
+SELECT c.id, c.name, c.level, c.experience, cc.name as class_name
+FROM characters c
+JOIN character_classes cc ON c.class_id = cc.id
+ORDER BY c.experience DESC, c.level DESC
+LIMIT :limit;
+
+-- name: get_wilderness_rankings
+SELECT c.id, c.name, c.level, c.wilderness_level, cc.name as class_name
+FROM characters c
+JOIN character_classes cc ON c.class_id = cc.id
+WHERE c.wilderness_level > 0
+ORDER BY c.wilderness_level DESC, c.level DESC
+LIMIT :limit;

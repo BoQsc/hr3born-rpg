@@ -410,13 +410,13 @@ async def character_detail(request: web_request.Request):
     <body>
         <!-- Top Navigation -->
         <div class="top-nav">
-            <div class="nav-tab">Explore World</div>
+            <div class="nav-tab" onclick="window.location.href='/game'">Explore World</div>
             <div class="nav-tab active">Character</div>
-            <div class="nav-tab">Dungeons</div>
-            <div class="nav-tab">Challenges</div>
-            <div class="nav-tab">All docs</div>
-            <div class="nav-tab">News</div>
-            <div class="nav-tab">Discord</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Dungeons</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Challenges</div>
+            <div class="nav-tab" onclick="window.location.href='/marketplace'">Marketplace</div>
+            <div class="nav-tab" onclick="window.location.href='/rankings'">Rankings</div>
+            <div class="nav-tab" onclick="window.location.href='/casino'">Casino</div>
         </div>
         
         <!-- Header Status Bar -->

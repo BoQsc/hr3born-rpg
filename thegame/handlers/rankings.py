@@ -19,20 +19,19 @@ async def rankings_main(request: web_request.Request):
     database = await get_db()
     async with database.get_connection_context() as conn:
         # Get rankings based on type
+        limit = 50  # Show top 50 players
         if ranking_type == 'power':
-            rankings = await get_power_rankings(conn)
+            rankings = await database.queries.get_power_rankings(conn, limit=limit)
         elif ranking_type == 'level':
-            rankings = await get_level_rankings(conn)
+            rankings = await database.queries.get_level_rankings(conn, limit=limit)
         elif ranking_type == 'gold':
-            rankings = await get_gold_rankings(conn)
+            rankings = await database.queries.get_gold_rankings(conn, limit=limit)
         elif ranking_type == 'experience':
-            rankings = await get_experience_rankings(conn)
+            rankings = await database.queries.get_experience_rankings(conn, limit=limit)
         elif ranking_type == 'wilderness':
-            rankings = await get_wilderness_rankings(conn)
-        elif ranking_type == 'pvp':
-            rankings = await get_pvp_rankings(conn)
+            rankings = await database.queries.get_wilderness_rankings(conn, limit=limit)
         else:
-            rankings = await get_power_rankings(conn)
+            rankings = await database.queries.get_power_rankings(conn, limit=limit)
     
     # Find character's position
     char_position = None
@@ -136,13 +135,12 @@ async def rankings_main(request: web_request.Request):
     <body>
         <!-- Top Navigation -->
         <div class="top-nav">
-            <div class="nav-tab">Explore World</div>
-            <div class="nav-tab">Dungeons</div>
-            <div class="nav-tab">Challenges</div>
-            <div class="nav-tab">Marketplace</div>
+            <div class="nav-tab" onclick="window.location.href='/game'">Explore World</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Dungeons</div>
+            <div class="nav-tab" onclick="window.location.href='/challenges'">Challenges</div>
+            <div class="nav-tab" onclick="window.location.href='/marketplace'">Marketplace</div>
             <div class="nav-tab active">Rankings</div>
-            <div class="nav-tab">News</div>
-            <div class="nav-tab">Discord</div>
+            <div class="nav-tab" onclick="window.location.href='/casino'">Casino</div>
         </div>
         
         <!-- Header Status Bar -->
@@ -219,194 +217,41 @@ async def rankings_main(request: web_request.Request):
     """
     return web.Response(text=html, content_type='text/html')
 
-async def get_power_rankings(conn):
-    """Get power rankings"""
-    query = '''
-        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
-               c.last_active, cc.name as class_name, f.name as faction_name
-        FROM characters c
-        JOIN character_classes cc ON c.class_id = cc.id
-        LEFT JOIN factions f ON c.faction_id = f.id
-        WHERE c.total_power > 0
-        ORDER BY c.total_power DESC, c.level DESC
-        LIMIT 100
-    '''
-    result = await conn.execute(query)
-    return await result.fetchall()
-
-async def get_level_rankings(conn):
-    """Get level rankings"""
-    query = '''
-        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
-               c.last_active, cc.name as class_name, f.name as faction_name
-        FROM characters c
-        JOIN character_classes cc ON c.class_id = cc.id
-        LEFT JOIN factions f ON c.faction_id = f.id
-        ORDER BY c.level DESC, c.experience DESC
-        LIMIT 100
-    '''
-    result = await conn.execute(query)
-    return await result.fetchall()
-
-async def get_gold_rankings(conn):
-    """Get gold rankings"""
-    query = '''
-        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
-               c.last_active, cc.name as class_name, f.name as faction_name
-        FROM characters c
-        JOIN character_classes cc ON c.class_id = cc.id
-        LEFT JOIN factions f ON c.faction_id = f.id
-        ORDER BY c.gold DESC, c.level DESC
-        LIMIT 100
-    '''
-    result = await conn.execute(query)
-    return await result.fetchall()
-
-async def get_experience_rankings(conn):
-    """Get experience rankings"""
-    query = '''
-        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
-               c.last_active, cc.name as class_name, f.name as faction_name
-        FROM characters c
-        JOIN character_classes cc ON c.class_id = cc.id
-        LEFT JOIN factions f ON c.faction_id = f.id
-        ORDER BY c.experience DESC, c.level DESC
-        LIMIT 100
-    '''
-    result = await conn.execute(query)
-    return await result.fetchall()
-
-async def get_wilderness_rankings(conn):
-    """Get wilderness level rankings"""
-    query = '''
-        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
-               c.last_active, cc.name as class_name, f.name as faction_name
-        FROM characters c
-        JOIN character_classes cc ON c.class_id = cc.id
-        LEFT JOIN factions f ON c.faction_id = f.id
-        ORDER BY c.wilderness_level DESC, c.level DESC
-        LIMIT 100
-    '''
-    result = await conn.execute(query)
-    return await result.fetchall()
-
-async def get_pvp_rankings(conn):
-    """Get PvP win rankings"""
-    query = '''
-        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
-               c.last_active, cc.name as class_name, f.name as faction_name,
-               COUNT(cl.id) as pvp_wins
-        FROM characters c
-        JOIN character_classes cc ON c.class_id = cc.id
-        LEFT JOIN factions f ON c.faction_id = f.id
-        LEFT JOIN combat_logs cl ON c.id = cl.winner_id AND cl.combat_type = 'pvp'
-        GROUP BY c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
-                 c.last_active, cc.name, f.name
-        ORDER BY pvp_wins DESC, c.total_power DESC
-        LIMIT 100
-    '''
-    result = await conn.execute(query)
-    return await result.fetchall()
-
 def build_rankings_html(rankings, current_char_id):
-    """Build rankings table HTML"""
+    """Build HTML for rankings list"""
     if not rankings:
-        return '<tr><td colspan="6" style="text-align: center; color: #ccc; padding: 40px;">No rankings available</td></tr>'
+        return '<div class="no-data">No rankings data available</div>'
     
     html = ""
-    for i, char in enumerate(rankings):
-        rank = i + 1
+    for i, rank in enumerate(rankings):
+        rank_num = i + 1
+        is_current = rank['id'] == current_char_id
+        row_class = 'current-player' if is_current else ''
         
-        # Determine rank styling
-        rank_class = ""
-        if rank == 1:
-            rank_class = "rank-1"
-        elif rank == 2:
-            rank_class = "rank-2"
-        elif rank == 3:
-            rank_class = "rank-3"
-        elif rank <= 10:
-            rank_class = "rank-top10"
-        elif rank <= 100:
-            rank_class = "rank-top100"
-        
-        # Check if this is current character
-        is_own = char['id'] == current_char_id
-        row_class = "own-character" if is_own else ""
-        
-        # Format last active
-        last_active = format_last_active(char['last_active'])
-        
-        # Get avatar emoji based on class
-        avatar_emoji = get_class_avatar(char['class_name'])
-        
-        # Determine primary stat based on ranking type
-        primary_stat = format_primary_stat(char)
+        # Handle sqlite3.Row objects properly
+        total_power = rank['total_power'] if 'total_power' in rank.keys() else 0
         
         html += f"""
         <tr class="{row_class}">
-            <td class="rank-number {rank_class}">
-                {'👑' if rank == 1 else '🥈' if rank == 2 else '🥉' if rank == 3 else rank}
+            <td class="rank">#{rank_num}</td>
+            <td class="name">
+                <a href="/character/{rank['id']}">{rank['name']}</a>
             </td>
-            <td>
-                <div class="character-info">
-                    <div class="character-avatar">{avatar_emoji}</div>
-                    <div>
-                        <div class="character-name">{char['name']}</div>
-                        {f'<div class="character-faction">{char["faction_name"]}</div>' if char.get('faction_name') else ''}
-                    </div>
-                </div>
-            </td>
-            <td class="character-class">{char['class_name']}</td>
-            <td class="stat-value stat-large stat-power">{primary_stat}</td>
-            <td class="stat-value stat-level">Level {char['level']}</td>
-            <td class="last-active {last_active['class']}">{last_active['text']}</td>
+            <td class="class">{rank['class_name']}</td>
+            <td class="level">{rank['level']}</td>
+            <td class="power">{total_power:,}</td>
         </tr>
         """
     
     return html
 
 def get_ranking_column_header(ranking_type):
-    """Get column header for ranking type"""
+    """Get the appropriate column header for ranking type"""
     headers = {
         'power': 'Total Power',
-        'level': 'Level',
-        'gold': 'Gold',
+        'level': 'Level', 
         'experience': 'Experience',
-        'wilderness': 'Wilderness Lv',
-        'pvp': 'PvP Wins'
+        'gold': 'Gold',
+        'wilderness': 'Wilderness Level'
     }
-    return headers.get(ranking_type, 'Total Power')
-
-def get_class_avatar(class_name):
-    """Get avatar emoji for character class"""
-    avatars = {
-        'Gangster': '🕴️',
-        'Monster': '👹',
-        'Pop Star': '⭐'
-    }
-    return avatars.get(class_name, '👤')
-
-def format_primary_stat(char):
-    """Format primary stat based on ranking context"""
-    # For now, just show total power
-    # This could be enhanced to show different stats based on ranking type
-    return f"{char['total_power']:,}"
-
-def format_last_active(last_active_str):
-    """Format last active timestamp"""
-    # Simple formatting - in a real implementation you'd parse the timestamp
-    # and calculate actual time differences
-    from datetime import datetime
-    try:
-        # For now, just show a mock status
-        # In real implementation, parse last_active_str and calculate difference
-        return {
-            'text': 'Online',
-            'class': 'active-recent'
-        }
-    except:
-        return {
-            'text': 'Offline',
-            'class': 'active-offline'
-        }
+    return headers.get(ranking_type, 'Power')

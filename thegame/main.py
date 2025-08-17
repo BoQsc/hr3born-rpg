@@ -189,8 +189,8 @@ async def main():
     # Run the web application
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, 'localhost', 8083)
-    print("Starting server at http://localhost:8083")
+    site = web.TCPSite(runner, 'localhost', 8082)
+    print("Starting server at http://localhost:8082")
     await site.start()
     
     # Keep running
