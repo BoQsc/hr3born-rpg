@@ -246,75 +246,80 @@ async def select_character(request: web_request.Request):
 async def character_detail(request: web_request.Request):
     """Character profile page - Outwar style"""
     await require_login(request)
-    character_id = int(request.match_info['character_id'])
     
-    database = await get_db()
-    async with database.get_connection_context() as conn:
-        char_data = await database.queries.get_character_by_id(conn, character_id)
-        if not char_data:
-            raise web.HTTPNotFound()
+    try:
+        character_id = int(request.match_info['character_id'])
+    except (ValueError, KeyError):
+        raise web.HTTPBadRequest(text="Invalid character ID")
+    
+    try:
+        database = await get_db()
+        async with database.get_connection_context() as conn:
+            char_data = await database.queries.get_character_by_id(conn, character_id=character_id)
+            if not char_data:
+                raise web.HTTPNotFound(text="Character not found")
+            
+            character = Character.from_db_row(char_data)
         
-        character = Character.from_db_row(char_data)
+            # Get equipment
+            equipment_data = await database.queries.get_character_equipment(conn, character_id=character_id)
+            equipment = {}
+            for eq in equipment_data:
+                equipment[eq['slot_name']] = Equipment(
+                    slot_id=eq['slot_id'],
+                    slot_name=eq['slot_name'],
+                    item_id=eq['item_id'],
+                    item_name=eq['name'],
+                    rarity_name=eq['rarity_name'],
+                    rarity_color=eq['color'],
+                    attack=eq['attack'],
+                    hit_points=eq['hit_points'],
+                    chaos_damage=eq['chaos_damage'],
+                    vile_damage=eq['vile_damage'],
+                    fire_damage=eq['fire_damage'],
+                    kinetic_damage=eq['kinetic_damage'],
+                    arcane_damage=eq['arcane_damage'],
+                    holy_damage=eq['holy_damage'],
+                    shadow_damage=eq['shadow_damage'],
+                    fire_resist=eq['fire_resist'],
+                    kinetic_resist=eq['kinetic_resist'],
+                    arcane_resist=eq['arcane_resist'],
+                    holy_resist=eq['holy_resist'],
+                    shadow_resist=eq['shadow_resist'],
+                    critical_hit_percent=eq['critical_hit_percent'],
+                    rampage_percent=eq['rampage_percent'],
+                    rage_per_hour=eq['rage_per_hour'],
+                    experience_per_hour=eq['experience_per_hour'],
+                    gold_per_turn=eq['gold_per_turn'],
+                    max_rage=eq['max_rage']
+                )
         
-        # Get equipment
-        equipment_data = await database.queries.get_character_equipment(conn, character_id)
-        equipment = {}
-        for eq in equipment_data:
-            equipment[eq['slot_name']] = Equipment(
-                slot_id=eq['slot_id'],
-                slot_name=eq['slot_name'],
-                item_id=eq['item_id'],
-                item_name=eq['name'],
-                rarity_name=eq['rarity_name'],
-                rarity_color=eq['color'],
-                attack=eq['attack'],
-                hit_points=eq['hit_points'],
-                chaos_damage=eq['chaos_damage'],
-                vile_damage=eq['vile_damage'],
-                fire_damage=eq['fire_damage'],
-                kinetic_damage=eq['kinetic_damage'],
-                arcane_damage=eq['arcane_damage'],
-                holy_damage=eq['holy_damage'],
-                shadow_damage=eq['shadow_damage'],
-                fire_resist=eq['fire_resist'],
-                kinetic_resist=eq['kinetic_resist'],
-                arcane_resist=eq['arcane_resist'],
-                holy_resist=eq['holy_resist'],
-                shadow_resist=eq['shadow_resist'],
-                critical_hit_percent=eq['critical_hit_percent'],
-                rampage_percent=eq['rampage_percent'],
-                rage_per_hour=eq['rage_per_hour'],
-                experience_per_hour=eq['experience_per_hour'],
-                gold_per_turn=eq['gold_per_turn'],
-                max_rage=eq['max_rage']
-            )
-    
-    # Calculate total stats from equipment
-    total_attack = character.attack + sum(eq.attack for eq in equipment.values())
-    total_hp = character.hit_points_max + sum(eq.hit_points for eq in equipment.values())
-    total_chaos = character.chaos_damage + sum(eq.chaos_damage for eq in equipment.values())
-    total_elemental = sum([
-        character.fire_damage + sum(eq.fire_damage for eq in equipment.values()),
-        character.kinetic_damage + sum(eq.kinetic_damage for eq in equipment.values()),
-        character.arcane_damage + sum(eq.arcane_damage for eq in equipment.values()),
-        character.holy_damage + sum(eq.holy_damage for eq in equipment.values()),
-        character.shadow_damage + sum(eq.shadow_damage for eq in equipment.values())
-    ])
-    total_resist = sum([
-        character.fire_resist + sum(eq.fire_resist for eq in equipment.values()),
-        character.kinetic_resist + sum(eq.kinetic_resist for eq in equipment.values()),
-        character.arcane_resist + sum(eq.arcane_resist for eq in equipment.values()),
-        character.holy_resist + sum(eq.holy_resist for eq in equipment.values()),
-        character.shadow_resist + sum(eq.shadow_resist for eq in equipment.values())
-    ])
-    
-    # Build Outwar-style equipment grid (3x4 + boots + quick slots)
-    equipment_grid_html = generate_equipment_grid(equipment)
-    
-    # Calculate experience growth (mock data)
-    yesterday_growth = min(character.experience // 100, 99999)
-    
-    html = f"""
+        # Calculate total stats from equipment
+        total_attack = character.attack + sum(eq.attack for eq in equipment.values())
+        total_hp = character.hit_points_max + sum(eq.hit_points for eq in equipment.values())
+        total_chaos = character.chaos_damage + sum(eq.chaos_damage for eq in equipment.values())
+        total_elemental = sum([
+            character.fire_damage + sum(eq.fire_damage for eq in equipment.values()),
+            character.kinetic_damage + sum(eq.kinetic_damage for eq in equipment.values()),
+            character.arcane_damage + sum(eq.arcane_damage for eq in equipment.values()),
+            character.holy_damage + sum(eq.holy_damage for eq in equipment.values()),
+            character.shadow_damage + sum(eq.shadow_damage for eq in equipment.values())
+        ])
+        total_resist = sum([
+            character.fire_resist + sum(eq.fire_resist for eq in equipment.values()),
+            character.kinetic_resist + sum(eq.kinetic_resist for eq in equipment.values()),
+            character.arcane_resist + sum(eq.arcane_resist for eq in equipment.values()),
+            character.holy_resist + sum(eq.holy_resist for eq in equipment.values()),
+            character.shadow_resist + sum(eq.shadow_resist for eq in equipment.values())
+        ])
+        
+        # Build Outwar-style equipment grid (3x4 + boots + quick slots)
+        equipment_grid_html = generate_equipment_grid(equipment)
+        
+        # Calculate experience growth (mock data)
+        yesterday_growth = min(character.experience // 100, 99999)
+        
+        html = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -609,8 +614,41 @@ async def character_detail(request: web_request.Request):
         </script>
     </body>
     </html>
-    """
-    return web.Response(text=html, content_type='text/html')
+        """
+        return web.Response(text=html, content_type='text/html')
+    
+    except Exception as e:
+        # Log the actual error
+        print(f"Character detail error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return user-friendly error page
+        error_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Character Profile Error</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 50px; }}
+                .error-container {{ max-width: 600px; margin: 0 auto; background: #333; padding: 40px; border-radius: 10px; }}
+                .error-title {{ color: #ff4444; font-size: 24px; margin-bottom: 20px; }}
+                .error-message {{ margin: 20px 0; }}
+                .back-link {{ color: #ff6600; text-decoration: none; }}
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <h1 class="error-title">Character Profile Error</h1>
+                <div class="error-message">
+                    Unable to load character profile. This may be due to missing character data or equipment information.
+                </div>
+                <a href="/game" class="back-link">← Return to Game</a>
+            </div>
+        </body>
+        </html>
+        """
+        return web.Response(text=error_html, content_type='text/html', status=500)
 
 def generate_equipment_grid(equipment):
     """Generate Outwar-style equipment grid"""
@@ -899,7 +937,7 @@ async def unequip_item(request: web_request.Request):
     database = await get_db()
     async with database.get_connection_context() as conn:
         # Get currently equipped item
-        equipment = await database.queries.get_character_equipment(conn, character.id)
+        equipment = await database.queries.get_character_equipment(conn, character_id=character.id)
         equipped_item = None
         for eq in equipment:
             if eq['slot_id'] == slot_id:

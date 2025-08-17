@@ -305,9 +305,12 @@ def build_combat_result_html(attacker, target, damage_breakdown, counter_breakdo
                 </div>
             </div>
             
-            <!-- Return Button -->
+            <!-- Action Buttons -->
             <div class="return-button">
-                <a href="/game" class="btn-return">RETURN TO WORLD</a>
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <a href="/game" class="btn-return">RETURN TO WORLD</a>
+                    {generate_combat_options(attacker, target, winner_id)}
+                </div>
             </div>
         </div>
         
@@ -321,6 +324,28 @@ def build_combat_result_html(attacker, target, damage_breakdown, counter_breakdo
     </html>
     """
     return html
+
+def generate_combat_options(attacker, target, winner_id):
+    """Generate additional combat options based on battle outcome"""
+    options = []
+    
+    if winner_id is None:
+        # Both still alive - continue fighting
+        options.append(f'<a href="/attack/{target.id}" class="btn-return" style="background: linear-gradient(180deg, #ff4444 0%, #cc3333 100%);">ATTACK AGAIN</a>')
+        options.append(f'<a href="/supplies" class="btn-return" style="background: linear-gradient(180deg, #32cd32 0%, #228b22 100%);">BUY HEALING</a>')
+    elif winner_id == attacker.id:
+        # Attacker won
+        options.append(f'<a href="/character/{target.id}" class="btn-return" style="background: linear-gradient(180deg, #ffd700 0%, #daa520 100%);">VIEW PROFILE</a>')
+        options.append(f'<a href="/marketplace" class="btn-return" style="background: linear-gradient(180deg, #4169e1 0%, #1e90ff 100%);">SELL LOOT</a>')
+    elif winner_id == target.id:
+        # Attacker lost
+        options.append(f'<a href="/supplies" class="btn-return" style="background: linear-gradient(180deg, #32cd32 0%, #228b22 100%);">BUY HEALING</a>')
+        options.append(f'<a href="/crew" class="btn-return" style="background: linear-gradient(180deg, #8a2be2 0%, #6a1b9a 100%);">GET BACKUP</a>')
+    
+    # Always available options
+    options.append(f'<a href="/rankings" class="btn-return" style="background: linear-gradient(180deg, #ff8c00 0%, #ff7518 100%);">VIEW RANKINGS</a>')
+    
+    return '\\n'.join(options)
 
 async def combat_history(request: web_request.Request):
     """View combat history"""

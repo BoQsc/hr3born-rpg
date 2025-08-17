@@ -1,5 +1,6 @@
 from aiohttp import web, web_request
 from typing import Dict, List
+import random
 
 from database import get_db
 from handlers.auth import require_login
@@ -184,14 +185,15 @@ async def game_main(request: web_request.Request):
                 <div class="menu-section">
                     <div class="menu-item"><span class="menu-icon">📁</span>MY RGA</div>
                     <div class="menu-item active"><span class="menu-icon">🏠</span>HOME</div>
-                    <div class="menu-item"><span class="menu-icon">👤</span>CHARACTER <span style="margin-left: auto;">▶</span></div>
-                    <div class="menu-item"><span class="menu-icon">🛒</span>MARKETPLACE <span style="margin-left: auto;">▶</span></div>
-                    <div class="menu-item"><span class="menu-icon">🏆</span>RANKINGS</div>
-                    <div class="menu-item"><span class="menu-icon">⚡</span>ACTIONS <span style="margin-left: auto;">▶</span></div>
-                    <div class="menu-item"><span class="menu-icon">👥</span>CREW <span style="margin-left: auto;">▶</span></div>
-                    <div class="menu-item"><span class="menu-icon">🎰</span>CASINO <span style="margin-left: auto;">▶</span></div>
-                    <div class="menu-item"><span class="menu-icon">🏅</span>CHALLENGES</div>
-                    <div class="menu-item"><span class="menu-icon">🌍</span>WORLD</div>
+                    <div class="menu-item" onclick="window.location.href='/character/{character.id}'"><span class="menu-icon">👤</span>CHARACTER <span style="margin-left: auto;">▶</span></div>
+                    <div class="menu-item" onclick="window.location.href='/marketplace'"><span class="menu-icon">🛒</span>MARKETPLACE <span style="margin-left: auto;">▶</span></div>
+                    <div class="menu-item" onclick="window.location.href='/rankings'"><span class="menu-icon">🏆</span>RANKINGS</div>
+                    <div class="menu-item" onclick="showActionsMenu()"><span class="menu-icon">⚡</span>ACTIONS <span style="margin-left: auto;">▶</span></div>
+                    <div class="menu-item" onclick="window.location.href='/crew'"><span class="menu-icon">👥</span>CREW <span style="margin-left: auto;">▶</span></div>
+                    <div class="menu-item" onclick="window.location.href='/casino'"><span class="menu-icon">🎰</span>CASINO <span style="margin-left: auto;">▶</span></div>
+                    <div class="menu-item" onclick="window.location.href='/challenges'"><span class="menu-icon">🏅</span>CHALLENGES</div>
+                    <div class="menu-item" onclick="window.location.href='/wilderness'"><span class="menu-icon">🌍</span>WILDERNESS</div>
+                    {f'<div class="menu-item" onclick="window.location.href=\'/factions\'"><span class="menu-icon">⚔️</span>FACTIONS</div>' if character.level >= 91 else ''}
                 </div>
                 <div class="get-points-btn">GET POINTS + TOKENS</div>
             </div>
@@ -209,10 +211,10 @@ async def game_main(request: web_request.Request):
                         </div>
                         
                         <div class="hotkeys">
-                            <button class="hotkey-btn">🎒 bag</button>
-                            <button class="hotkey-btn">🏛️ my vault</button>
-                            <button class="hotkey-btn">👤 profile</button>
-                            <button class="hotkey-btn">📊 stats</button>
+                            <button class="hotkey-btn" onclick="window.location.href='/inventory'">🎒 bag</button>
+                            <button class="hotkey-btn" onclick="window.location.href='/crew/vault'">🏛️ my vault</button>
+                            <button class="hotkey-btn" onclick="window.location.href='/character/{character.id}'">👤 profile</button>
+                            <button class="hotkey-btn" onclick="window.location.href='/rankings'">📊 stats</button>
                         </div>
                     </div>
                 </div>
@@ -227,10 +229,10 @@ async def game_main(request: web_request.Request):
                         </div>
                         
                         <div class="action-buttons">
-                            <button class="action-btn">Supplies</button>
-                            <button class="action-btn">Treasury</button>
-                            <button class="action-btn">Dungeons</button>
-                            <button class="action-btn">Wilderness</button>
+                            <button class="action-btn" onclick="window.location.href='/supplies'">Supplies</button>
+                            <button class="action-btn" onclick="window.location.href='/treasury'">Treasury</button>
+                            <button class="action-btn" onclick="window.location.href='/challenges'">Dungeons</button>
+                            <button class="action-btn" onclick="window.location.href='/wilderness'">Wilderness</button>
                         </div>
                         
                         <div class="npc-list">
@@ -238,11 +240,49 @@ async def game_main(request: web_request.Request):
                         </div>
                     </div>
                 </div>
+                
+                <!-- Recent Activity Section -->
+                <div class="room-section">
+                    <div class="section-title">- Recent Activity -</div>
+                    <div class="room-content">
+                        <div style="font-size: 11px; line-height: 1.3;">
+                            <div style="margin: 5px 0; color: #ccc;">🔥 <span style="color: #ffd700;">WorkingHero</span> defeated <span style="color: #ff8888;">Bandit Leader</span> (+2,500 exp)</div>
+                            <div style="margin: 5px 0; color: #ccc;">💰 <span style="color: #32cd32;">SuccessHero</span> sold <span style="color: #ff8c00;">Mythic Sword</span> for 50,000g</div>
+                            <div style="margin: 5px 0; color: #ccc;">⚔️ <span style="color: #ff6666;">TestChar</span> attacked <span style="color: #87ceeb;">EquippedHero</span></div>
+                            <div style="margin: 5px 0; color: #ccc;">🏆 <span style="color: #ffd700;">NewTestChar</span> reached level 15</div>
+                            <div style="margin: 5px 0; color: #ccc;">🎲 <span style="color: #ff8c00;">FinalTest</span> won 25,000g at the casino</div>
+                            <div style="margin: 5px 0; color: #ccc;">🌟 <span style="color: #87ceeb;">boberhunter</span> completed quest "Dragon's Lair"</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Server Info Section -->
+                <div class="room-section">
+                    <div class="section-title">- Server Status -</div>
+                    <div class="room-content" style="font-size: 11px;">
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>Players Online:</span>
+                            <span style="color: #32cd32; font-weight: bold;">{random.randint(45, 78)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>Active Battles:</span>
+                            <span style="color: #ff6666; font-weight: bold;">{random.randint(3, 12)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>Market Trades:</span>
+                            <span style="color: #ffd700; font-weight: bold;">{random.randint(15, 45)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>Server Uptime:</span>
+                            <span style="color: #87ceeb; font-weight: bold;">99.8%</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Right Sidebar -->
             <div class="right-sidebar">
-                <div class="quest-helper">
+                <div class="quest-helper" onclick="window.location.href='/quests'" style="cursor: pointer;">
                     <div class="quest-header">QUEST HELPER</div>
                     <input type="text" class="quest-search" placeholder="Search for a Quest Mob">
                     <div class="quest-target">
@@ -257,47 +297,123 @@ async def game_main(request: web_request.Request):
                 </div>
             </div>
         </div>
+        
+        <script>
+        function showActionsMenu() {{
+            const actions = [
+                'Equipment Manager',
+                'Inventory Organizer', 
+                'Auto-Battle Settings',
+                'Trade Center',
+                'Quick Stats',
+                'Character Settings'
+            ];
+            
+            let actionList = 'Available Actions:\\n\\n';
+            actions.forEach((action, index) => {{
+                actionList += `${{index + 1}}. ${{action}}\\n`;
+            }});
+            actionList += '\\nChoose an action (1-6):';
+            
+            const choice = prompt(actionList);
+            
+            if (choice) {{
+                switch(choice) {{
+                    case '1':
+                        window.location.href = '/inventory';
+                        break;
+                    case '2':
+                        window.location.href = '/inventory';
+                        break;
+                    case '3':
+                        alert('Auto-Battle: Currently set to MANUAL mode. Configure your battle preferences here.');
+                        break;
+                    case '4':
+                        window.location.href = '/marketplace';
+                        break;
+                    case '5':
+                        window.location.href = '/character/{character.id}';
+                        break;
+                    case '6':
+                        alert('Character Settings: Manage your privacy, notifications, and gameplay preferences.');
+                        break;
+                    default:
+                        alert('Invalid selection.');
+                }}
+            }}
+        }}
+        </script>
     </body>
     </html>
     """
     return web.Response(text=html, content_type='text/html')
 
 def generate_minimap(current_room_id, connections):
-    """Generate ASCII-style minimap"""
-    # Simple 5x3 grid minimap centered on current room
-    minimap = [
-        ['░', '░', '░', '░', '░'],
-        ['░', '?', '█', '?', '░'],
-        ['░', '░', '░', '░', '░']
-    ]
+    """Generate visual minimap with CSS"""
+    # Create a visual grid-based minimap
+    available_directions = [conn['direction'].lower() for conn in connections]
     
-    # Mark current room
-    minimap[1][2] = '◆'  # Current position
+    # Build minimap grid HTML
+    minimap_html = f'''
+    <div style="display: grid; grid-template-columns: repeat(5, 25px); grid-gap: 2px; justify-content: center; margin: 10px 0;">
+        <!-- Row 1 -->
+        <div class="minimap-cell unknown"></div>
+        <div class="minimap-cell {'available' if 'north' in available_directions else 'unknown'}" title="North">{'🚪' if 'north' in available_directions else '⬛'}</div>
+        <div class="minimap-cell unknown"></div>
+        <div class="minimap-cell {'available' if 'northeast' in available_directions else 'unknown'}" title="Northeast">{'🚪' if 'northeast' in available_directions else '⬛'}</div>
+        <div class="minimap-cell unknown"></div>
+        
+        <!-- Row 2 -->
+        <div class="minimap-cell {'available' if 'northwest' in available_directions else 'unknown'}" title="Northwest">{'🚪' if 'northwest' in available_directions else '⬛'}</div>
+        <div class="minimap-cell {'available' if 'west' in available_directions else 'unknown'}" title="West">{'🚪' if 'west' in available_directions else '⬛'}</div>
+        <div class="minimap-cell current" title="Current Location">👤</div>
+        <div class="minimap-cell {'available' if 'east' in available_directions else 'unknown'}" title="East">{'🚪' if 'east' in available_directions else '⬛'}</div>
+        <div class="minimap-cell {'available' if 'southeast' in available_directions else 'unknown'}" title="Southeast">{'🚪' if 'southeast' in available_directions else '⬛'}</div>
+        
+        <!-- Row 3 -->
+        <div class="minimap-cell unknown"></div>
+        <div class="minimap-cell {'available' if 'south' in available_directions else 'unknown'}" title="South">{'🚪' if 'south' in available_directions else '⬛'}</div>
+        <div class="minimap-cell unknown"></div>
+        <div class="minimap-cell {'available' if 'southwest' in available_directions else 'unknown'}" title="Southwest">{'🚪' if 'southwest' in available_directions else '⬛'}</div>
+        <div class="minimap-cell unknown"></div>
+    </div>
     
-    # Add connections
-    connection_map = {
-        'north': (0, 2),
-        'south': (2, 2),
-        'east': (1, 3),
-        'west': (1, 1),
-        'northeast': (0, 3),
-        'northwest': (0, 1),
-        'southeast': (2, 3),
-        'southwest': (2, 1)
-    }
+    <style>
+    .minimap-cell {{
+        width: 25px;
+        height: 25px;
+        border: 1px solid #666;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        border-radius: 3px;
+    }}
+    .minimap-cell.current {{
+        background: linear-gradient(45deg, #ffd700, #ffeb3b);
+        border-color: #ff8c00;
+        color: #000;
+        font-size: 12px;
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+    }}
+    .minimap-cell.available {{
+        background: linear-gradient(45deg, #32cd32, #90ee90);
+        border-color: #00aa00;
+        cursor: pointer;
+    }}
+    .minimap-cell.available:hover {{
+        background: linear-gradient(45deg, #90ee90, #98fb98);
+        transform: scale(1.1);
+    }}
+    .minimap-cell.unknown {{
+        background: #333;
+        border-color: #555;
+        color: #666;
+    }}
+    </style>
+    '''
     
-    for conn in connections:
-        direction = conn['direction'].lower()
-        if direction in connection_map:
-            y, x = connection_map[direction]
-            minimap[y][x] = '□'  # Available room
-    
-    # Convert to string
-    result = ""
-    for row in minimap:
-        result += ' '.join(row) + '\n'
-    
-    return result
+    return minimap_html
 
 def generate_movement_controls(connections):
     """Generate WASD movement controls"""

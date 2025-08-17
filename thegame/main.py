@@ -6,7 +6,7 @@ import secrets
 from pathlib import Path
 
 from database import init_database, get_db
-from handlers import auth, character, world, crew, combat
+from handlers import auth, character, world, crew, combat, marketplace, rankings, casino, challenges, wilderness, factions, supplies, treasury, quests
 
 @web.middleware
 async def error_middleware(request, handler):
@@ -93,6 +93,49 @@ async def init_app():
         web.post('/crew/create', crew.create_crew),
         web.post('/crew/{crew_id}/join', crew.join_crew),
         web.get('/crew/vault', crew.crew_vault),
+        
+        # Marketplace system
+        web.get('/marketplace', marketplace.marketplace_main),
+        web.post('/marketplace/buy/{listing_id}', marketplace.buy_item),
+        web.post('/marketplace/sell', marketplace.sell_item),
+        
+        # Rankings system
+        web.get('/rankings', rankings.rankings_main),
+        
+        # Casino system
+        web.get('/casino', casino.casino_main),
+        web.post('/casino/update-gold', casino.update_gold),
+        
+        # Challenges and dungeons
+        web.get('/challenges', challenges.challenges_main),
+        web.post('/challenges/start/{challenge_id}', challenges.start_challenge),
+        web.post('/challenges/claim/{challenge_id}', challenges.claim_reward),
+        
+        # Wilderness exploration
+        web.get('/wilderness', wilderness.wilderness_main),
+        web.post('/wilderness/explore', wilderness.explore_wilderness),
+        web.post('/wilderness/combat', wilderness.wilderness_combat),
+        
+        # Faction system
+        web.get('/factions', factions.factions_main),
+        web.post('/factions/join/{faction_id}', factions.join_faction),
+        web.post('/factions/leave', factions.leave_faction),
+        
+        # Supplies shop
+        web.get('/supplies', supplies.supplies_main),
+        web.post('/supplies/buy', supplies.buy_supplies),
+        
+        # Treasury system
+        web.get('/treasury', treasury.treasury_main),
+        web.post('/treasury/banking', treasury.handle_banking),
+        web.post('/treasury/invest', treasury.handle_investment),
+        web.post('/treasury/insurance', treasury.handle_insurance),
+        web.post('/treasury/claim', treasury.handle_claim),
+        
+        # Quest system
+        web.get('/quests', quests.quest_helper),
+        web.post('/quests/accept/{quest_id}', quests.accept_quest),
+        web.post('/quests/track/{quest_id}', quests.track_quest),
         
         # Static files
         web.static('/static', Path(__file__).parent / 'static'),

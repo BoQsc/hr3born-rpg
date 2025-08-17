@@ -1,0 +1,412 @@
+from aiohttp import web, web_request
+from typing import Dict, List, Optional
+
+from database import get_db
+from handlers.auth import require_login
+from handlers.character import get_current_character
+
+async def rankings_main(request: web_request.Request):
+    """Main rankings interface - Outwar style"""
+    await require_login(request)
+    character = await get_current_character(request)
+    
+    if not character:
+        raise web.HTTPFound('/characters')
+    
+    # Get ranking type from query params
+    ranking_type = request.query.get('type', 'power')
+    
+    database = await get_db()
+    async with database.get_connection_context() as conn:
+        # Get rankings based on type
+        if ranking_type == 'power':
+            rankings = await get_power_rankings(conn)
+        elif ranking_type == 'level':
+            rankings = await get_level_rankings(conn)
+        elif ranking_type == 'gold':
+            rankings = await get_gold_rankings(conn)
+        elif ranking_type == 'experience':
+            rankings = await get_experience_rankings(conn)
+        elif ranking_type == 'wilderness':
+            rankings = await get_wilderness_rankings(conn)
+        elif ranking_type == 'pvp':
+            rankings = await get_pvp_rankings(conn)
+        else:
+            rankings = await get_power_rankings(conn)
+    
+    # Find character's position
+    char_position = None
+    for i, rank in enumerate(rankings):
+        if rank['id'] == character.id:
+            char_position = i + 1
+            break
+    
+    # Build rankings HTML
+    rankings_html = build_rankings_html(rankings, character.id)
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Rankings - Outwar</title>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #ffffff; }}
+            
+            /* Top Navigation */
+            .top-nav {{ background: linear-gradient(180deg, #000 0%, #333 100%); height: 40px; display: flex; }}
+            .nav-tab {{ padding: 8px 20px; color: #ccc; cursor: pointer; border-radius: 8px 8px 0 0; }}
+            .nav-tab.active {{ background: linear-gradient(180deg, #ff8c00 0%, #ffd700 100%); color: #000; font-weight: bold; }}
+            
+            /* Header Status Bar */
+            .status-bar {{ background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%); height: 30px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #000; font-size: 11px; font-weight: bold; }}
+            .status-left {{ display: flex; gap: 15px; align-items: center; }}
+            .status-right {{ display: flex; gap: 10px; }}
+            .status-icon {{ width: 16px; height: 16px; border-radius: 50%; background: #333; }}
+            
+            /* Main Container */
+            .main-container {{ padding: 20px; max-width: 1200px; margin: 0 auto; }}
+            
+            /* Rankings Header */
+            .rankings-header {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center; }}
+            .rankings-title {{ color: #ffd700; font-size: 28px; font-weight: bold; margin-bottom: 15px; }}
+            .rankings-subtitle {{ color: #ccc; margin-bottom: 20px; }}
+            
+            /* Ranking Tabs */
+            .ranking-tabs {{ display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }}
+            .ranking-tab {{ padding: 10px 20px; background: #444; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; }}
+            .ranking-tab.active {{ background: #ffd700; color: #000; font-weight: bold; }}
+            .ranking-tab:hover {{ background: #555; }}
+            .ranking-tab.active:hover {{ background: #ffdd33; }}
+            
+            /* Player Position Banner */
+            .player-position {{ background: linear-gradient(90deg, #4169e1, #1e3a8a); border: 1px solid #5578ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center; }}
+            .position-text {{ font-size: 16px; font-weight: bold; }}
+            .position-rank {{ color: #ffd700; font-size: 20px; }}
+            
+            /* Rankings Table */
+            .rankings-container {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; overflow: hidden; }}
+            .rankings-table {{ width: 100%; border-collapse: collapse; }}
+            .rankings-table th {{ background: #444; color: #ffd700; padding: 15px; text-align: left; font-weight: bold; border-bottom: 2px solid #666; }}
+            .rankings-table td {{ padding: 12px 15px; border-bottom: 1px solid #444; }}
+            .rankings-table tr:hover {{ background: #333; }}
+            .rankings-table tr.own-character {{ background: #1a3d5c; }}
+            .rankings-table tr.own-character:hover {{ background: #2a4d6c; }}
+            
+            /* Rank Styling */
+            .rank-number {{ font-weight: bold; font-size: 16px; width: 60px; text-align: center; }}
+            .rank-1 {{ color: #ffd700; }}
+            .rank-2 {{ color: #c0c0c0; }}
+            .rank-3 {{ color: #cd7f32; }}
+            .rank-top10 {{ color: #ff6600; }}
+            .rank-top100 {{ color: #00aa00; }}
+            
+            /* Character Info */
+            .character-info {{ display: flex; align-items: center; gap: 10px; }}
+            .character-avatar {{ width: 32px; height: 32px; background: linear-gradient(45deg, #666, #999); border-radius: 50%; display: flex; align-items: center; justify-content: center; }}
+            .character-name {{ font-weight: bold; color: #88ccff; }}
+            .character-class {{ color: #ccc; font-size: 11px; }}
+            .character-faction {{ color: #ff8c00; font-size: 10px; }}
+            
+            /* Stats */
+            .stat-value {{ font-weight: bold; }}
+            .stat-large {{ font-size: 16px; }}
+            .stat-power {{ color: #ff6600; }}
+            .stat-level {{ color: #00aa00; }}
+            .stat-gold {{ color: #ffd700; }}
+            .stat-exp {{ color: #88ccff; }}
+            
+            /* Last Active */
+            .last-active {{ color: #ccc; font-size: 11px; }}
+            .active-recent {{ color: #00ff00; }}
+            .active-offline {{ color: #ff4444; }}
+            
+            /* Footer */
+            .rankings-footer {{ background: #333; padding: 15px; text-align: center; color: #ccc; font-size: 12px; }}
+            
+            /* Responsive */
+            @media (max-width: 768px) {{
+                .rankings-table {{ font-size: 12px; }}
+                .rankings-table th, .rankings-table td {{ padding: 8px; }}
+                .ranking-tabs {{ gap: 5px; }}
+                .ranking-tab {{ padding: 8px 12px; font-size: 11px; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="nav-tab">Explore World</div>
+            <div class="nav-tab">Dungeons</div>
+            <div class="nav-tab">Challenges</div>
+            <div class="nav-tab">Marketplace</div>
+            <div class="nav-tab active">Rankings</div>
+            <div class="nav-tab">News</div>
+            <div class="nav-tab">Discord</div>
+        </div>
+        
+        <!-- Header Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span>{character.name}</span>
+                <span>🔴</span>
+                <span>🕐 {character.id % 12 + 1}:{(character.id * 7) % 60:02d}am</span>
+                <span>Level: {character.level}</span>
+                <span>EXP: {character.experience:,}</span>
+                <span>RAGE: {character.rage_current}</span>
+            </div>
+            <div class="status-right">
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+                <div class="status-icon"></div>
+            </div>
+        </div>
+        
+        <!-- Main Container -->
+        <div class="main-container">
+            <!-- Rankings Header -->
+            <div class="rankings-header">
+                <div class="rankings-title">🏆 LEADERBOARDS</div>
+                <div class="rankings-subtitle">See how you stack up against other players</div>
+            </div>
+            
+            <!-- Ranking Tabs -->
+            <div class="ranking-tabs">
+                <button class="ranking-tab {'active' if ranking_type == 'power' else ''}" onclick="switchRanking('power')">💪 Total Power</button>
+                <button class="ranking-tab {'active' if ranking_type == 'level' else ''}" onclick="switchRanking('level')">⭐ Level</button>
+                <button class="ranking-tab {'active' if ranking_type == 'experience' else ''}" onclick="switchRanking('experience')">📈 Experience</button>
+                <button class="ranking-tab {'active' if ranking_type == 'gold' else ''}" onclick="switchRanking('gold')">💰 Gold</button>
+                <button class="ranking-tab {'active' if ranking_type == 'wilderness' else ''}" onclick="switchRanking('wilderness')">🌲 Wilderness</button>
+                <button class="ranking-tab {'active' if ranking_type == 'pvp' else ''}" onclick="switchRanking('pvp')">⚔️ PvP Wins</button>
+            </div>
+            
+            <!-- Player Position -->
+            {f'<div class="player-position"><div class="position-text">Your Current Rank: <span class="position-rank">#{char_position}</span> of {len(rankings)}</div></div>' if char_position else ''}
+            
+            <!-- Rankings Table -->
+            <div class="rankings-container">
+                <table class="rankings-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Character</th>
+                            <th>Class</th>
+                            <th>{get_ranking_column_header(ranking_type)}</th>
+                            <th>Level</th>
+                            <th>Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rankings_html}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Footer -->
+            <div class="rankings-footer">
+                Rankings updated every 5 minutes • Only active players shown • Last updated: Now
+            </div>
+        </div>
+        
+        <script>
+        function switchRanking(type) {{
+            window.location.href = '/rankings?type=' + type;
+        }}
+        </script>
+    </body>
+    </html>
+    """
+    return web.Response(text=html, content_type='text/html')
+
+async def get_power_rankings(conn):
+    """Get power rankings"""
+    query = '''
+        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
+               c.last_active, cc.name as class_name, f.name as faction_name
+        FROM characters c
+        JOIN character_classes cc ON c.class_id = cc.id
+        LEFT JOIN factions f ON c.faction_id = f.id
+        WHERE c.total_power > 0
+        ORDER BY c.total_power DESC, c.level DESC
+        LIMIT 100
+    '''
+    result = await conn.execute(query)
+    return await result.fetchall()
+
+async def get_level_rankings(conn):
+    """Get level rankings"""
+    query = '''
+        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
+               c.last_active, cc.name as class_name, f.name as faction_name
+        FROM characters c
+        JOIN character_classes cc ON c.class_id = cc.id
+        LEFT JOIN factions f ON c.faction_id = f.id
+        ORDER BY c.level DESC, c.experience DESC
+        LIMIT 100
+    '''
+    result = await conn.execute(query)
+    return await result.fetchall()
+
+async def get_gold_rankings(conn):
+    """Get gold rankings"""
+    query = '''
+        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
+               c.last_active, cc.name as class_name, f.name as faction_name
+        FROM characters c
+        JOIN character_classes cc ON c.class_id = cc.id
+        LEFT JOIN factions f ON c.faction_id = f.id
+        ORDER BY c.gold DESC, c.level DESC
+        LIMIT 100
+    '''
+    result = await conn.execute(query)
+    return await result.fetchall()
+
+async def get_experience_rankings(conn):
+    """Get experience rankings"""
+    query = '''
+        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
+               c.last_active, cc.name as class_name, f.name as faction_name
+        FROM characters c
+        JOIN character_classes cc ON c.class_id = cc.id
+        LEFT JOIN factions f ON c.faction_id = f.id
+        ORDER BY c.experience DESC, c.level DESC
+        LIMIT 100
+    '''
+    result = await conn.execute(query)
+    return await result.fetchall()
+
+async def get_wilderness_rankings(conn):
+    """Get wilderness level rankings"""
+    query = '''
+        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
+               c.last_active, cc.name as class_name, f.name as faction_name
+        FROM characters c
+        JOIN character_classes cc ON c.class_id = cc.id
+        LEFT JOIN factions f ON c.faction_id = f.id
+        ORDER BY c.wilderness_level DESC, c.level DESC
+        LIMIT 100
+    '''
+    result = await conn.execute(query)
+    return await result.fetchall()
+
+async def get_pvp_rankings(conn):
+    """Get PvP win rankings"""
+    query = '''
+        SELECT c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
+               c.last_active, cc.name as class_name, f.name as faction_name,
+               COUNT(cl.id) as pvp_wins
+        FROM characters c
+        JOIN character_classes cc ON c.class_id = cc.id
+        LEFT JOIN factions f ON c.faction_id = f.id
+        LEFT JOIN combat_logs cl ON c.id = cl.winner_id AND cl.combat_type = 'pvp'
+        GROUP BY c.id, c.name, c.level, c.total_power, c.experience, c.gold, c.wilderness_level,
+                 c.last_active, cc.name, f.name
+        ORDER BY pvp_wins DESC, c.total_power DESC
+        LIMIT 100
+    '''
+    result = await conn.execute(query)
+    return await result.fetchall()
+
+def build_rankings_html(rankings, current_char_id):
+    """Build rankings table HTML"""
+    if not rankings:
+        return '<tr><td colspan="6" style="text-align: center; color: #ccc; padding: 40px;">No rankings available</td></tr>'
+    
+    html = ""
+    for i, char in enumerate(rankings):
+        rank = i + 1
+        
+        # Determine rank styling
+        rank_class = ""
+        if rank == 1:
+            rank_class = "rank-1"
+        elif rank == 2:
+            rank_class = "rank-2"
+        elif rank == 3:
+            rank_class = "rank-3"
+        elif rank <= 10:
+            rank_class = "rank-top10"
+        elif rank <= 100:
+            rank_class = "rank-top100"
+        
+        # Check if this is current character
+        is_own = char['id'] == current_char_id
+        row_class = "own-character" if is_own else ""
+        
+        # Format last active
+        last_active = format_last_active(char['last_active'])
+        
+        # Get avatar emoji based on class
+        avatar_emoji = get_class_avatar(char['class_name'])
+        
+        # Determine primary stat based on ranking type
+        primary_stat = format_primary_stat(char)
+        
+        html += f"""
+        <tr class="{row_class}">
+            <td class="rank-number {rank_class}">
+                {'👑' if rank == 1 else '🥈' if rank == 2 else '🥉' if rank == 3 else rank}
+            </td>
+            <td>
+                <div class="character-info">
+                    <div class="character-avatar">{avatar_emoji}</div>
+                    <div>
+                        <div class="character-name">{char['name']}</div>
+                        {f'<div class="character-faction">{char["faction_name"]}</div>' if char.get('faction_name') else ''}
+                    </div>
+                </div>
+            </td>
+            <td class="character-class">{char['class_name']}</td>
+            <td class="stat-value stat-large stat-power">{primary_stat}</td>
+            <td class="stat-value stat-level">Level {char['level']}</td>
+            <td class="last-active {last_active['class']}">{last_active['text']}</td>
+        </tr>
+        """
+    
+    return html
+
+def get_ranking_column_header(ranking_type):
+    """Get column header for ranking type"""
+    headers = {
+        'power': 'Total Power',
+        'level': 'Level',
+        'gold': 'Gold',
+        'experience': 'Experience',
+        'wilderness': 'Wilderness Lv',
+        'pvp': 'PvP Wins'
+    }
+    return headers.get(ranking_type, 'Total Power')
+
+def get_class_avatar(class_name):
+    """Get avatar emoji for character class"""
+    avatars = {
+        'Gangster': '🕴️',
+        'Monster': '👹',
+        'Pop Star': '⭐'
+    }
+    return avatars.get(class_name, '👤')
+
+def format_primary_stat(char):
+    """Format primary stat based on ranking context"""
+    # For now, just show total power
+    # This could be enhanced to show different stats based on ranking type
+    return f"{char['total_power']:,}"
+
+def format_last_active(last_active_str):
+    """Format last active timestamp"""
+    # Simple formatting - in a real implementation you'd parse the timestamp
+    # and calculate actual time differences
+    from datetime import datetime
+    try:
+        # For now, just show a mock status
+        # In real implementation, parse last_active_str and calculate difference
+        return {
+            'text': 'Online',
+            'class': 'active-recent'
+        }
+    except:
+        return {
+            'text': 'Offline',
+            'class': 'active-offline'
+        }
