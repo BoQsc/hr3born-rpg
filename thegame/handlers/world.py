@@ -101,7 +101,9 @@ async def game_main(request: web_request.Request):
             
             /* Center Content */
             .center-content {{ flex: 1; padding: 20px; background: #333; }}
-            .room-section {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; margin-bottom: 20px; }}
+            .rooms-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }}
+            .room-section {{ background: #2d2d2d; border: 1px solid #555; border-radius: 8px; }}
+            .room-section.full-width {{ margin-bottom: 20px; }}
             .section-title {{ background: #444; padding: 10px 15px; border-radius: 8px 8px 0 0; font-weight: bold; text-align: center; }}
             .room-content {{ padding: 20px; }}
             
@@ -129,7 +131,7 @@ async def game_main(request: web_request.Request):
             .action-btn:hover {{ background: #555; }}
             
             /* NPC List */
-            .npc-list {{ }}
+            .npc-list {{ max-height: 200px; overflow-y: auto; border: 1px solid #555; border-radius: 5px; background: #1a1a1a; }}
             .npc-entry {{ display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #444; }}
             .npc-info {{ display: flex; align-items: center; gap: 8px; }}
             .npc-icon {{ font-size: 16px; }}
@@ -200,49 +202,52 @@ async def game_main(request: web_request.Request):
             
             <!-- Center Content -->
             <div class="center-content">
-                <!-- Underground Casino Section -->
-                <div class="room-section">
-                    <div class="section-title">- {room_info['zone_name']} -</div>
-                    <div class="room-content">
-                        <div class="minimap">{minimap_html}</div>
-                        
-                        <div class="movement-controls">
-                            {movement_controls}
-                        </div>
-                        
-                        <div class="hotkeys">
-                            <button class="hotkey-btn" onclick="window.location.href='/inventory'">🎒 bag</button>
-                            <button class="hotkey-btn" onclick="window.location.href='/crew/vault'">🏛️ my vault</button>
-                            <button class="hotkey-btn" onclick="window.location.href='/character/{character.id}'">👤 profile</button>
-                            <button class="hotkey-btn" onclick="window.location.href='/rankings'">📊 stats</button>
+                <!-- Main Room Sections Grid -->
+                <div class="rooms-grid">
+                    <!-- Room Navigation Section -->
+                    <div class="room-section">
+                        <div class="section-title">- {room_info['zone_name']} -</div>
+                        <div class="room-content">
+                            <div class="minimap">{minimap_html}</div>
+                            
+                            <div class="movement-controls">
+                                {movement_controls}
+                            </div>
+                            
+                            <div class="hotkeys">
+                                <button class="hotkey-btn" onclick="window.location.href='/inventory'">🎒 bag</button>
+                                <button class="hotkey-btn" onclick="window.location.href='/crew/vault'">🏛️ my vault</button>
+                                <button class="hotkey-btn" onclick="window.location.href='/character/{character.id}'">👤 profile</button>
+                                <button class="hotkey-btn" onclick="window.location.href='/rankings'">📊 stats</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Room Details Section -->
-                <div class="room-section">
-                    <div class="section-title">- Room Details: {character.current_room_id} -</div>
-                    <div class="room-content">
-                        <div class="room-image">
-                            {room_info['name']}<br>
-                            <small>{room_info['description']}</small>
-                        </div>
-                        
-                        <div class="action-buttons">
-                            <button class="action-btn" onclick="window.location.href='/supplies'">Supplies</button>
-                            <button class="action-btn" onclick="window.location.href='/treasury'">Treasury</button>
-                            <button class="action-btn" onclick="window.location.href='/challenges'">Dungeons</button>
-                            <button class="action-btn" onclick="window.location.href='/wilderness'">Wilderness</button>
-                        </div>
-                        
-                        <div class="npc-list">
-                            {npcs_html}
+                    
+                    <!-- Room Details Section -->
+                    <div class="room-section">
+                        <div class="section-title">- Room Details: {character.current_room_id} -</div>
+                        <div class="room-content">
+                            <div class="room-image">
+                                {room_info['name']}<br>
+                                <small>{room_info['description']}</small>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="action-btn" onclick="window.location.href='/supplies'">Supplies</button>
+                                <button class="action-btn" onclick="window.location.href='/treasury'">Treasury</button>
+                                <button class="action-btn" onclick="window.location.href='/challenges'">Dungeons</button>
+                                <button class="action-btn" onclick="window.location.href='/wilderness'">Wilderness</button>
+                            </div>
+                            
+                            <div class="npc-list">
+                                {npcs_html}
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Recent Activity Section -->
-                <div class="room-section">
+                <div class="room-section full-width">
                     <div class="section-title">- Recent Activity -</div>
                     <div class="room-content">
                         <div style="font-size: 11px; line-height: 1.3;">
