@@ -136,11 +136,11 @@ async def rankings_main(request: web_request.Request):
         <!-- Top Navigation -->
         <div class="top-nav">
             <div class="nav-tab" onclick="window.location.href='/game'">Explore World</div>
-            <div class="nav-tab" onclick="window.location.href='/challenges'">Dungeons</div>
             <div class="nav-tab" onclick="window.location.href='/challenges'">Challenges</div>
             <div class="nav-tab" onclick="window.location.href='/marketplace'">Marketplace</div>
             <div class="nav-tab active">Rankings</div>
             <div class="nav-tab" onclick="window.location.href='/casino'">Casino</div>
+            <div class="nav-tab" onclick="window.location.href='/wilderness'">Wilderness</div>
         </div>
         
         <!-- Header Status Bar -->
@@ -238,8 +238,9 @@ def build_rankings_html(rankings, current_char_id):
                 <a href="/character/{rank['id']}">{rank['name']}</a>
             </td>
             <td class="class">{rank['class_name']}</td>
-            <td class="level">{rank['level']}</td>
             <td class="power">{total_power:,}</td>
+            <td class="level">{rank['level']}</td>
+            <td class="last-active">Online</td>
         </tr>
         """
     

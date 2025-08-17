@@ -158,11 +158,11 @@ async def marketplace_main(request: web_request.Request):
         <!-- Top Navigation -->
         <div class="top-nav">
             <div class="nav-tab" onclick="window.location.href='/game'">Explore World</div>
-            <div class="nav-tab" onclick="window.location.href='/challenges'">Dungeons</div>
             <div class="nav-tab" onclick="window.location.href='/challenges'">Challenges</div>
             <div class="nav-tab active">Marketplace</div>
             <div class="nav-tab" onclick="window.location.href='/rankings'">Rankings</div>
             <div class="nav-tab" onclick="window.location.href='/casino'">Casino</div>
+            <div class="nav-tab" onclick="window.location.href='/wilderness'">Wilderness</div>
         </div>
         
         <!-- Header Status Bar -->
