@@ -85,7 +85,31 @@ async def game_main(request: web_request.Request):
             .status-bar {{ background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%); height: 30px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #000; font-size: 11px; font-weight: bold; }}
             .status-left {{ display: flex; gap: 15px; align-items: center; }}
             .status-right {{ display: flex; gap: 10px; }}
-            .status-icon {{ width: 16px; height: 16px; border-radius: 50%; background: #333; }}
+            
+            /* Status Bar Interactive Elements */
+            .character-name {{ cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: all 0.2s; }}
+            .character-name:hover {{ background: rgba(0,0,0,0.1); transform: scale(1.05); }}
+            
+            .level-stat, .exp-stat, .rage-stat {{ cursor: help; padding: 2px 4px; border-radius: 3px; transition: all 0.2s; }}
+            .level-stat:hover, .exp-stat:hover, .rage-stat:hover {{ background: rgba(0,0,0,0.1); }}
+            
+            .status-icon {{ width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 3px; transition: all 0.2s; font-size: 10px; }}
+            .status-icon:hover {{ background: rgba(0,0,0,0.1); transform: scale(1.1); }}
+            
+            /* Character Dropdown */
+            .character-dropdown {{ position: absolute; top: 30px; left: 15px; background: #333; border: 1px solid #666; border-radius: 5px; padding: 10px; min-width: 200px; display: none; z-index: 1000; }}
+            .character-dropdown.show {{ display: block; }}
+            .dropdown-item {{ color: white; padding: 8px 12px; cursor: pointer; border-radius: 3px; }}
+            .dropdown-item:hover {{ background: #555; }}
+            
+            /* Floating Windows */
+            .floating-window {{ position: fixed; background: #2d2d2d; border: 2px solid #666; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 1000; display: none; min-width: 300px; }}
+            .floating-window.show {{ display: block; }}
+            .window-header {{ background: #444; padding: 8px 12px; border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; align-items: center; cursor: move; }}
+            .window-title {{ color: #ffd700; font-weight: bold; }}
+            .window-close {{ color: #ff4444; cursor: pointer; font-size: 16px; }}
+            .window-close:hover {{ color: #ff6666; }}
+            .window-content {{ padding: 15px; color: white; }}
             
             /* Main Layout */
             .game-container {{ display: flex; height: calc(100vh - 70px); }}
@@ -165,18 +189,18 @@ async def game_main(request: web_request.Request):
         <!-- Header Status Bar -->
         <div class="status-bar">
             <div class="status-left">
-                <span>{character.name}</span>
-                <span>🔴</span>
-                <span>🕐 {character.id % 12 + 1}:{(character.id * 7) % 60:02d}am</span>
-                <span>Level: {character.level}</span>
-                <span>EXP: {character.experience:,}</span>
-                <span>RAGE: {character.rage_current}</span>
+                <span class="character-name" onclick="showCharacterDropdown()" title="Click to switch characters">{character.name}</span>
+                <span class="status-indicator" title="Online">🔴</span>
+                <span class="game-time" title="Current game time">🕐 {character.id % 12 + 1}:{(character.id * 7) % 60:02d}am</span>
+                <span class="level-stat" title="Experience to next level: {character.experience_to_next_level:,} XP">Level: {character.level}</span>
+                <span class="exp-stat" title="Total Experience Points earned">EXP: {character.experience:,}</span>
+                <span class="rage-stat" title="Current Rage: {character.rage_current}/{character.rage_max} | Rage regenerates over time">RAGE: {character.rage_current}</span>
             </div>
             <div class="status-right">
-                <div class="status-icon"></div>
-                <div class="status-icon"></div>
-                <div class="status-icon"></div>
-                <div class="status-icon"></div>
+                <div class="status-icon equipment-icon" onclick="openFloatingWindow('equipment')" title="Equipment Manager - Manage your gear and weapons">⚔️</div>
+                <div class="status-icon inventory-icon" onclick="openFloatingWindow('inventory')" title="Backpack - View and organize your items">🎒</div>
+                <div class="status-icon stats-icon" onclick="openFloatingWindow('stats')" title="Character Stats - Detailed character information">📊</div>
+                <div class="status-icon tools-icon" onclick="openFloatingWindow('tools')" title="Game Tools - Quick access utilities">🔧</div>
             </div>
         </div>
         
